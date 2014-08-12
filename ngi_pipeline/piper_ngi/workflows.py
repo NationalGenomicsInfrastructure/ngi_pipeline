@@ -58,7 +58,7 @@ def workflow_merge_process_variantCall(*args, **kwargs):
     :rtype: str
     """
     # Same command line but with one additional option
-    return workflow_dna_variantcalling(*args, **kwargs) +  " --merge_alignments --data_processing --variant_calling"
+    return workflow_dna_variantcalling(*args, **kwargs) +  " --merge_alignments --data_processing --variant_calling --analyze_separatly "
 
 
 def workflow_dna_variantcalling(qscripts_dir_path, setup_xml_path, global_config_path, output_dir=None):
