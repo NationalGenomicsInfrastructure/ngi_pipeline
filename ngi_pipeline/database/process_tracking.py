@@ -44,7 +44,6 @@ def check_update_jobs_status(projects_to_check=None, config=None, config_file_pa
     :param dict config: The parsed NGI configuration file; optional.
     :param list config_file_path: The path to the NGI configuration file; optional.
     """
-    
     db_dict = get_all_tracked_processes()
     for job_name, project_dict in db_dict.iteritems():
         LOG.info("Checking workflow {} for project {}...".format(project_dict["workflow"],
@@ -66,7 +65,7 @@ def check_update_jobs_status(projects_to_check=None, config=None, config_file_pa
                     #in this case I need to update the run level infomration
                     #I know that:
                     # I am running Piper at flowcell level, I need to know the folder where results are stored!!!
-                    write_to_charon_alignment_results(job_name, return_code, project_dict["run_dir"])
+                    write_to_charon_alignment_results(job_name, return_code)
                 elif project_dict["workflow"] == "NGI":
                     write_to_charon_NGI_results(job_name, return_code, project_dict["run_dir"])
                 else:
@@ -268,8 +267,8 @@ def write_to_charon_NGI_results(job_id, return_code, run_dir=None):
         # e.g. A.Wedell_13_03_P567_102
         ## FIXME won't work for Uppsala project/sample names
         m = re.match(r'(?P<project_name>\w\.\w+_\d+_\d+)_(?P<sample_id>P\d+_\d+)', job_id)
-        project_id   = get_project_id_from_name(m.groupdict['project_name'])
-        sample_id    = m.groupdict['sample_id']
+        project_id   = get_project_id_from_name(m.group(1)) ## MARIO FIX THIS BEETER IF YOU WANT get_project_id_from_name(m.groupdict['project_name'])
+        sample_id    = m.group(2) #m.groupdict['sample_id']
     except (TypeError, AttributeError):
         error_msg = "Could not parse project/sample ids from job id \"{}\"; cannot update Charon with results!".format(job_id)
         raise RuntimeError(error_msg)
@@ -291,9 +290,11 @@ def write_to_charon_alignment_results(job_id, return_code):
 
     :raises RuntimeError: If the Charon database could not be updated
     """
+    import pdb
+    pdb.set_trace()
     try:
         # e.g. A.Wedell_13_03_P567_102_A_140528_D00415_0049_BC423WACXX
-        m = re.match(r('(?P<project_name>\w\.\w+_\d+_\d+)_(?P<sample_id>P\d+_\d+)_'
+        m = re.match(('(?P<project_name>\w\.\w+_\d+_\d+)_(?P<sample_id>P\d+_\d+)_'
                       '(?P<libprep_id>\w)_(?P<seqrun_id>\d{6}_.+_\d{4}_.{10})'), job_id).groupdict()
     except AttributeError:
         raise ValueError("Could not parse job_id \"{}\"; does not match template.".format(job_id))

@@ -11,7 +11,8 @@ from ngi_pipeline.database.communicate import get_workflow_for_project
 from ngi_pipeline.database.process_tracking import check_if_sample_analysis_is_running, \
                                                    is_flowcell_analysis_running, \
                                                    is_sample_analysis_running, \
-                                                   record_process_flowcell
+                                                   record_process_flowcell, \
+                                                   record_process_sample
 from ngi_pipeline.log.loggers import minimal_logger
 from ngi_pipeline.utils.classes import with_ngi_config
 
@@ -63,13 +64,20 @@ def launch_analysis_for_flowcells(projects_to_analyze, config=None, config_file_
                 for fcid in libprep:
                     # Check Charon to ensure this hasn't already been processed
                     status = CharonSession().seqrun_get(project.project_id, sample, libprep, fcid).get('alignment_status')
-                    if status and status not in ("NEW", "FAILED"):
+                    
+                    if status and status not in ("NEW", "FAILED", "DONE"):
                         # If status is not NEW or FAILED (which means it is RUNNING or DONE), skip processing
-                        continue
+                        if is_flowcell_analysis_running(project, sample, libprep, fcid, config):
+                            continue
+                    if status and status is "RUNNING":
+                            if not is_flowcell_analysis_running(project, sample, libprep, fcid, config):
+                                error_msg = ("Charon and local db incongruency:  Project {}, Sample {}, Library {}, flowcell {} "
+                                        "Charon reports it as running but not trace of it in local DB ".format(project, sample, libprep, fcid))
+                                LOG.error(error_msg)
+                            continue
                     # Check the local jobs database to determine if this flowcell is already being analyzed
                     if not is_flowcell_analysis_running(project, sample, libprep, fcid, config):
                         try:
-
                             # This workflow thing will be handled on the engine side. Here we'll just call like "piper_ngi.flowcell_level_analysis"
                             # or something and it will handle which workflows to execute (qc, alignment, ...)
                             workflow_name = "dna_alignonly"  #must be taken from somewhere, either config file or Charon
@@ -84,9 +92,10 @@ def launch_analysis_for_flowcells(projects_to_analyze, config=None, config_file_
                                                                             sample= sample,
                                                                             libprep = libprep,
                                                                             fcid = fcid,
-                                                                            workflow_name=workflow_name)
+                                                                            workflow_name=workflow_name,
+                                                                            config_file_path=config_file_path)
 
-                            record_process_flowcell(p_handle, workflow, project, sample, libprep, fcid, analysis_module, project.analysis_dir, config)
+                            record_process_flowcell(p_handle, workflow_name, project, sample, libprep, fcid, analysis_module, project.analysis_dir, config)
                         # TODO which exceptions can we expect to be raised here?
                         except Exception as e:
                             error_msg = ('Cannot process project "{}": {}'.format(project, e))
@@ -166,17 +175,24 @@ def trigger_sample_level_analysis(config=None, config_file_path=None):
         projectObj = createIGNproject(analysis_top_dir, project["name"],  project_id)
 
         analysis_dir = os.path.join(analysis_top_dir, "ANALYSIS", project["name"] )
+        #import pdb
+        #pdb.set_trace()
 
         for sample in samples_dict: #sample_dict is a charon object
             sample_id = sample["sampleid"]
             #check that it is not already running
             analysis_running = check_if_sample_analysis_is_running(projectObj, projectObj.samples[sample_id], config)
             #check that this analysis is not already done
-            if "status" in sample and sample["status"] == "done":
+            if "status" in sample and sample["status"] == "DONE":
                 analysis_done = True
             else:
                 analysis_done = False
-
+            
+            if "status" in sample and sample["status"] == "RUNNING" and not analysis_running:
+                error_msg = ("Charon and local db incongruency (sample process level):  Project {}, Sample {}  "
+                                        "Charon reports it as running but not trace of it in local DB ".format(project_id, sample_id))
+                LOG.error(error_msg)
+                continue
             if not analysis_running and not analysis_done: #I need to avoid start process if things are done
                 try:
                     # note here I do not know if I am going to start some anlaysis or not, depends on the Engine that is called
@@ -241,15 +257,4 @@ def createIGNproject(analysis_top_dir, project_name, project_id):
             for seqrun in seqruns_dict:
                 runid = seqrun["seqrunid"]
                 #looks like 140528_D00415_0049_BC423WACXX
-                seqrun_object = libprep_object.add_seqrun(name=runid, dirname=runid)
-
-    return project_obj
-
-
-
-
-        
-
-
-
-
+                

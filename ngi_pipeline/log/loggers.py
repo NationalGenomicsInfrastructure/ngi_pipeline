@@ -24,8 +24,8 @@ def minimal_logger(namespace, config_path=None, extra_fields=None, debug=False):
     :returns: A logbook.Logger object
     :rtype: logbook.Logger
     """
-    log = logbook.Logger(namespace, level=logbook.WARNING)
-    #log = logbook.Logger(namespace, level=logbook.INFO)
+    #log = logbook.Logger(namespace, level=logbook.WARNING)
+    log = logbook.Logger(namespace, level=logbook.INFO)
     s_h = logbook.StreamHandler(sys.stdout, level=logbook.INFO, bubble=True)
     log.handlers.append(s_h)
     #try:
