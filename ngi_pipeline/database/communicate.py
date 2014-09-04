@@ -13,18 +13,22 @@ def get_project_id_from_name(project_name):
     :rtype: str
 
     :raises RuntimeError: If there is some problem relating to the GET (HTTP Return code != 200)
-    :raises ValueError: If the project id is missing from the project database entry
+    :raises ValueError: If the project has no project id in the database or if the project does not exist in Charon
     """
     charon_session = CharonSession()
-    url = charon_session.construct_charon_url("project", project_name)
-    project_response = charon_session.get(url)
-    if project_response.status_code != 200:
-        raise RuntimeError("Error when accessing Charon DB: {}".format(project_response.reason))
+
     try:
-        return project_response.json()['projectid']
+        project_id = charon_session.project_get(project_name)
+    except CharonError as e:
+        if e.return_code == 404:
+            raise ValueError('Project "{}" missing from database: {}'.format(project_name, e))
+        else:
+            raise RuntimeError(e)
+    try:
+        return project_id['projectid']
     except KeyError:
         raise ValueError('Couldn\'t retrive project id for project "{}"; '
-                         'value not found in database.'.format(project))
+                         'this project\'s database entry has no "projectid" value.'.format(project))
 
 
 def rebuild_project_obj_from_Charon(analysis_top_dir, project_name, project_id):
@@ -86,23 +90,19 @@ def get_workflow_for_project(project_id):
 
     :returns: The names of the workflow that should be run.
     :rtype: str
-    :raises ValueError: If the project cannot be found in the database
-    :raises IOError: If the database cannot be reached
+    :raises ValueError: If the project cannot be found in the database or if the project lacks a pipeline/workflow value
+    :raises RuntimeError: If there is some other database problem
     """
     charon_session = CharonSession()
-    url = charon_session.construct_charon_url("project", project_id)
-    project_response = charon_session.get(url)
-    if project_response.status_code != 200:
-        error_msg = ('Error accessing database: could not get all project {}: {}'.format(project_id, project_response.reason))
-        LOG.error(error_msg)
-        raise RuntimeError(error_msg) #MARIO I do not want to learn how to handle expection in Python...I want to proceed fast to a working solution... we will fix this things later with your help
-    project_dict = project_response.json()
+    try:
+        project_dict = charon_session.project_get(project_id)
+    except CharonError as e:
+        if e.status_code == 404:
+            raise ValueError('Project "{}" not found: {}'.format(project_id, e))
+        else:
+            error_msg = ('Error accessing database: could not get project {}: {}'.format(project_id, e))
+            raise RuntimeError(error_msg)
     if "pipeline" not in project_dict:
-        error_msg = ('project {} has no associeted pipeline/workflow to execute'.format(project_id))
-        LOG.error(error_msg)
+        error_msg = ('Project {} has no associated pipeline/workflow to execute'.format(project_id))
         raise RuntimeError(error_msg)
-    #ok now I return the workflow to execute
     return project_dict["pipeline"]
-
-
-    

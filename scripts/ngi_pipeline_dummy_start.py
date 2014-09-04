@@ -9,7 +9,7 @@ from ngi_pipeline.database.process_tracking import check_update_jobs_status
 
 def main(demux_fcid_dir, test_step_1, restrict_to_projects=None, restrict_to_samples=None):
     if not test_step_1:
-        process_demultiplexed_flowcell(demux_fcid_dir, restrict_to_projects, restrict_to_samples)
+        process_demultiplexed_flowcell(demux_fcid_dir[0], restrict_to_projects, restrict_to_samples)
     elif test_step_1:
     
         demux_fcid_dir = "/proj/a2010002/INBOX/130701_SN7001298_0153_BH0JMGADXX/" # A.Wedell_13_03 sample P567_102

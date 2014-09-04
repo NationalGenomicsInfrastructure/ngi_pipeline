@@ -119,12 +119,12 @@ def is_flowcell_analysis_running(project, sample, libprep, seqrun, config=None):
     """Determine if a flowcell is currently being analyzed."""
     sequencing_run = "{}/{}/{}/{}".format(project.project_id, sample, libprep, seqrun)
     LOG.info('Checking if sequencing run "{}" is currently '
-             'being analyzed.'.format(sequencing_run))
+             'being analyzed...'.format(sequencing_run))
     if is_analysis_running(project, sample, libprep, seqrun, level="flowcell"):
-        LOG.info('Sequencing run "{}" is currently being analyzed.'.format(sequencing_run))
+        LOG.info('...sequencing run "{}" is currently being analyzed.'.format(sequencing_run))
         return True
     else:
-        LOG.info('Sequencing run "{}" is not currently under analysis.'.format(sequencing_run))
+        LOG.info('...sequencing run "{}" is not currently under analysis.'.format(sequencing_run))
         return False
 
 

@@ -85,7 +85,10 @@ def launch_analysis_for_flowcells(projects_to_analyze, config=None, config_file_
                                      'Charon reports FAILURE, manual investigation needed!'.format(project, sample, libprep, seqrun))
                         ## TODO send an email or something -- this should be a Charon-related process, not done here
                         LOG.error(error_msg)
-                        continue
+                        ### FIXME these next two line are a temp fix because Nestor is misbehaving and we just want to retry the analysis
+                        ##        note that here it would be nice to differentiate between DATA_FAILURE and COMPUTE_FAILURE!!
+                        LOG.warn("Continuing with project anyway (remove me later)")
+                        #continue
                     # at this point the status is only None or NEW, I need only to check that the analysis is already running (which would be strange)
                     if not is_flowcell_analysis_running(project, sample, libprep, seqrun, config):
                         try:

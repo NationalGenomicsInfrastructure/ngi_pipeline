@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+
 from __future__ import print_function
 
 import glob
@@ -208,7 +209,15 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
                 src_fastq_files = [ os.path.join(src_sample_dir, fastq_file)
                                     for fastq_file in seqrun_object.fastq_files ] ##MARIO: check this
                 LOG.info("Copying fastq files from {} to {}...".format(sample_dir, seqrun_dir))
+                #try:
+                ## FIXME this exception should be handled somehow when rsync fails
                 do_rsync(src_fastq_files, seqrun_dir)
+                #except subprocess.CalledProcessError as e:
+                #    import ipdb; ipdb.set_trace()
+                #    ## TODO should we delete this libprep from the sample object in this case?
+                #    ##      this could be an issue downstream as well
+                #    LOG.warn('Error when performing rsync for "{}/{}/{}": '
+                #              '{}'.format(project, sample, libprep, e,))
     return projects_to_analyze
 
 

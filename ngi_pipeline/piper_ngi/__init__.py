@@ -35,20 +35,15 @@ def analyze_flowcell_run(project, sample, libprep, seqrun, workflow_name, config
     :returns: The subprocess.Popen object for the process
     :rtype: subprocess.Popen
     """
-    #Here I am in the Piper World: this means that I can be Engine specific!!!
-    
     modules_to_load = ["java/sun_jdk1.7.0_25", "R/2.15.0"]
     load_modules(modules_to_load)
-    #things to to do
-    # 1- convert the current project/sample/libprep/seqrun structure into the piper structure
-    # 2- build setup_xml specific for this fc run
-    # 3- run piper at fc run
     try:
-        #convert_sthlm_to_uppsala(project, seqrun) #this converts the entire project, it is not specific to the sample. Not a big deal, it will simply complain about the fact that it has alredy converted it
-        ## FIXME I think I broke this
         build_setup_xml(project, config, sample , libprep.name, seqrun.name)
         command_line = build_piper_cl(project, "dna_alignonly", config)
-        return launch_piper_job(command_line, project)
+        ## HACK fix later
+        log_file_name = "{}-{}-{}-{}.log".format(project, sample, libprep, seqrun)
+        log_file_path = os.path.join(project.base_path, "ANALYSIS", project.dirname, log_file_name)
+        return launch_piper_job(command_line, project, log_file_path=log_file_path)
     ## FIXME define exceptions more narrowly
     except Exception as e:
         error_msg = ('Processing project "{}" / sample "{}" / libprep "{}" / '
@@ -103,41 +98,7 @@ def analyze_sample_run(project, sample, config=None, config_file_path=None):
                  'waiting more data.'.format(sample))
 
 
-## Your time will come
-def convert_sthlm_to_uppsala(project, fcid):
-    """Convert projects from Stockholm style (three-level) to Uppsala style
-    (two-level) using the sthlm2UUSNP Java utility and produces a
-    report.tsv for use as input to Piper.
-
-    :param NGIProject project: The project to be converted.
-    :param NGISeqRun fcid: The flowcell ID to be converted.
-    """
-    # Requires sthlm2UUSNP on PATH
-    cl_template = "sthlm2UUSNP -i {input_dir} -o {output_dir} -f {flowcell}"
-    LOG.info("Converting Sthlm project \"{}\" to UUSNP format".format(project))
-    input_dir = os.path.join(project.base_path, "DATA", project.dirname)
-    uppsala_dirname = "{}".format(project.dirname)
-    output_dir = os.path.join(project.base_path, "DATA_UUSNP", uppsala_dirname)
-    #check if for this flowcell I have already generate the data
-    if not os.path.exists(os.path.join(output_dir,fcid.name)):
-        com = cl_template.format(input_dir=input_dir, output_dir=output_dir,
-                                 flowcell=fcid)
-        try:
-            subprocess.check_call(shlex.split(com))
-        except subprocess.CalledProcessError as e:
-            error_msg = ("Unable to convert Sthlm->UU format for "
-                         "project {} / flowcell {}: {}".format(project, fcid, e))
-            raise RuntimeError(error_msg)
-    project.dirname = uppsala_dirname
-    project.name = uppsala_dirname
-    for sample in project.samples.values():
-        # Naming expected by Piper; might consider whether to set sample.name as well
-        if not sample.dirname.startswith("Sample_"):
-            sample.dirname =  "Sample_{}".format(sample.dirname)
-            #sample.name    =  "Sample_{}".format(sample.name)
-
-
-def launch_piper_job(command_line, project):
+def launch_piper_job(command_line, project, log_file_path=None):
     """Launch the Piper command line.
 
     :param str command_line: The command line to execute
@@ -149,7 +110,17 @@ def launch_piper_job(command_line, project):
     cwd = os.path.join(project.base_path, "ANALYSIS", project.dirname)
     ## TODO Would like to log these to the log -- can we get a Logbook filehandle-like object?
     ## TODO add exception handling
-    popen_object = execute_command_line(command_line, cwd=cwd)
+    popen_object = execute_command_line(command_line, cwd=cwd,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+    if not log_file_path:
+        log_process_non_blocking(popen_object.stdout, LOG.info)
+        log_process_non_blocking(popen_object.stderr, LOG.warn)
+    else:
+        # Hack hack
+        log_file = open(log_file_path, 'a')
+        log_process_non_blocking(popen_object.stdout, log_file.write)
+        log_process_non_blocking(popen_object.stderr, log_file.write)
     return popen_object
 
 
