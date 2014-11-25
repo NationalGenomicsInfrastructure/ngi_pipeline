@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import glob
 
 from setuptools import setup, find_packages
 
@@ -16,5 +17,6 @@ setup(name="ngi_pipeline",
       url="https://github.com/scilifelab/scilifelab_pipeline",
       version="0.1.0",
       install_requires=install_requires,
+      scripts = glob.glob('scripts/*py'),
       packages=find_packages()
       )

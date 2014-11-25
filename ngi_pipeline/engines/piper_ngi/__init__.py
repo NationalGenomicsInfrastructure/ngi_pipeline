@@ -269,7 +269,7 @@ def sbatch_piper_job(command_line, workflow_name, project, sample, libprep=None,
                 required_total_autosomal_coverage = int(config.get("piper", {}).get("sample", {}).get("required_autosomal_coverage"))
             except (TypeError, ValueError) as e:
                 LOG.error('Unable to parse required total autosomal coverage value from '
-                          'config file, using 30 instead.'
+                          'config file, using 30 instead.')
             required_total_autosomal_coverage = 30
             bash_conditional = \
             ('source activate {conda_environment}\n'

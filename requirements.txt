@@ -12,5 +12,6 @@ nose-exclude==0.2.0
 psutil==2.1.1
 python-dateutil==1.5
 requests==2.3.0
+tornado
 wsgiref==0.1.2
 xmltodict==0.9.0
