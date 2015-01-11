@@ -25,7 +25,6 @@ def launch_analysis(projects_to_analyze, restart_failed_jobs=False,
     :param dict config: The parsed NGI configuration file; optional/has default.
     :param str config_file_path: The path to the NGI configuration file; optional/has default.
     """
-    update_charon_with_local_jobs_status() # Update Charon with the local state of all the jobs we're running
     charon_session = CharonSession()
     for project in projects_to_analyze: # Get information from Charon regarding which best practice analyses to run
         try:
