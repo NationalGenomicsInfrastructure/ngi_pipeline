@@ -10,7 +10,7 @@ environment:
     project_id: a2014205
 
 piper:
-    path_to_piper_qscripts: /proj/a2014205/software/piper/qscripts
+    path_to_piper_qscripts: /proj/a2014205/software/piper_bin/qscripts/
 
 supported_genomes:
     "GRCh37": "/proj/a2014205/piper_references/gatk_bundle/2.8/b37/human_g1k_v37.fasta"
