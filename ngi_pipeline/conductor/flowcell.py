@@ -24,7 +24,8 @@ from ngi_pipeline.utils.parsers import determine_library_prep_from_fcid, \
 LOG = minimal_logger(__name__)
 
 UPPSALA_PROJECT_RE = re.compile(r'(\w{2}-\d{4}|\w{2}\d{2,3})')
-STHLM_PROJECT_RE = re.compile(r'[A-z][_.][A-z]+_\d{2}_\d{2}')
+STHLM_PROJECT_RE = re.compile(r'[A-z][_.][A-z0-9]+_\d{2}_\d{2}')
+STHLM_X_PROJECT_RE = re.compile(r'[A-z]_[A-z0-9]+_\d{2}_\d{2}')
 
 
 def process_demultiplexed_flowcell(demux_fcid_dir_path, restrict_to_projects=None,
@@ -76,6 +77,7 @@ def process_demultiplexed_flowcells(demux_fcid_dirs, restrict_to_projects=None,
     # Sort/copy each raw demux FC into project/sample/fcid format -- "analysis-ready"
     projects_to_analyze = dict()
     for demux_fcid_dir in demux_fcid_dirs_set:
+        demux_fcid_dir = os.path.abspath(demux_fcid_dir)
         # These will be a bunch of Project objects each containing Samples, FCIDs, lists of fastq files
         projects_to_analyze = setup_analysis_directory_structure(demux_fcid_dir,
                                                                  projects_to_analyze,
@@ -157,14 +159,10 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
         return []
     # Map the directory structure for this flowcell
     try:
-        fc_dir_structure = parse_bcl2fastq_2_5_directory(fc_dir)
+        fc_dir_structure = parse_flowcell(fc_dir)
     except (OSError, ValueError) as e:
-        # If this fails, try to parse the 2500 structure
-        try:
-            fc_dir_structure = parse_bcl2fastq_1_8_directory(fc_dir)
-        except (OSError, ValueError) as e:
-            LOG.error("Error when processing flowcell dir \"{}\": {}".format(fc_dir, e))
-            return []
+        LOG.error("Error when processing flowcell dir \"{}\": {}".format(fc_dir, e))
+        return []
     fc_full_id = fc_dir_structure['fc_full_id']
     if not fc_dir_structure.get('projects'):
         LOG.warn("No projects found in specified flowcell directory \"{}\"".format(fc_dir))
@@ -232,13 +230,29 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
                 try:
                     libprep_name = determine_library_prep_from_fcid(project_id, sample_name, fc_full_id)
                 except ValueError:
-                    LOG.warn('Project "{}" / sample "{}" / seqrun "{}" / fastq "{}" '
-                             'has no libprep information in Charon. Setting '
-                             'library prep to "Unknown"'.format(project_name,
-                                                                sample_name,
-                                                                fc_full_id,
-                                                                fq_file))
-                    libprep_name = "Unknown"
+                    charon_session = CharonSession()
+                    libpreps = charon_session.sample_get_libpreps(project_id, sample_name).get('libpreps')
+                    if len(libpreps) == 1:
+                        libprep_name = libpreps[0].get('libprepid')
+                        LOG.warn('Project "{}" / sample "{}" / seqrun "{}" / fastq "{}" '
+                                 'has no libprep information in Charon, but only one '
+                                 'library prep is present in Charon ("{}"). Using '
+                                 'this as the library prep.'.format(project_name,
+                                                                    sample_name,
+                                                                    fc_full_id,
+                                                                    fq_file,
+                                                                    libprep_name))
+                    else:
+                        error_text = ('Project "{}" / sample "{}" / seqrun "{}" / fastq "{}" '
+                                      'has no libprep information in Charon. Skipping '
+                                      'analysis.'.format(project_name, sample_name,
+                                                         fc_full_id, fq_file))
+                        LOG.error(error_text)
+                        mail_analysis(project_name=project_name,
+                                      sample_name=sample_name,
+                                      level="ERROR",
+                                      info_text=error_text)
+                        continue
                 libprep_object = sample_obj.add_libprep(name=libprep_name,
                                                         dirname=libprep_name)
                 libprep_dir = os.path.join(sample_dir, libprep_name)
@@ -272,43 +286,16 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
                             LOG.error(error_text)
                             mail_analysis(project_name=project_name,
                                           sample_name=sample_name,
-                                          engine_name='piper_ngi',
                                           level="ERROR",
                                           info_text=error_text)
                             continue
     return projects_to_analyze
 
 
-def parse_bcl2fastq_1_8_directory(fc_dir):
+def parse_flowcell(fc_dir):
     """
-    Traverse a CASAVA-1.8-generated directory structure for the HiSeq 2500
+    Traverse a CASAVA-1.8 or 2.5 generated directory structure for the HiSeq 2500
     and return a dictionary of the elements it contains.
-    The flowcell directory tree for HiSeq 2500 runs has (roughly) the structure:
-
-    |-- Data
-    |   |-- Intensities
-    |       |-- BaseCalls
-    |-- InterOp
-    |-- SampleSheet.csv
-    |-- Unaligned
-    |   |-- Basecall_Stats_C2PUYACXX
-    |-- Unaligned_16bp
-        |-- Basecall_Stats_C2PUYACXX
-        |   |-- css
-        |   |-- Matrix
-        |   |-- Phasing
-        |   |-- Plots
-        |   |-- SignalMeans
-        |   |-- Temp
-        |-- Project_J__Bjorkegren_13_02
-        |   |-- Sample_P680_356F_dual56
-        |   |   |-- <fastq files are here>
-        |   |-- Sample_P680_360F_dual60
-        |   |   ...
-        |-- Undetermined_indices
-            |-- Sample_lane1
-            |   ...
-            |-- Sample_lane8
 
     :param str fc_dir: The directory created by CASAVA for this flowcell.
 
@@ -319,125 +306,40 @@ def parse_bcl2fastq_1_8_directory(fc_dir):
     """
     projects = []
     fc_dir = os.path.abspath(fc_dir)
-
     if not os.access(fc_dir, os.F_OK): os_msg = "does not exist"
     if not os.access(fc_dir, os.R_OK): os_msg = "could not be read (permission denied)"
     if locals().get('os_msg'): raise OSError("Error with flowcell dir {}: directory {}".format(fc_dir, os_msg))
-
     LOG.info('Parsing flowcell directory "{}"...'.format(fc_dir))
-    try:
-        samplesheet_path = os.path.abspath(glob.glob(os.path.join(fc_dir, "SampleSheet.csv"))[0])
-        LOG.debug("SampleSheet.csv found at {}".format(samplesheet_path))
-    except IndexError:
+    samplesheet_path = os.path.join(fc_dir, "SampleSheet.csv")
+    LOG.debug("SampleSheet.csv found at {}".format(samplesheet_path))
+    if not os.path.exists(samplesheet_path):
         LOG.warn("Could not find samplesheet in directory {}".format(fc_dir))
         samplesheet_path = None
-
     fc_full_id = os.path.basename(fc_dir)
-    # "Unaligned*" because SciLifeLab dirs are called "Unaligned_Xbp"
-    # (where "X" is the index length) and there is also an "Unaligned" folder
-    unaligned_dir_pattern = os.path.join(fc_dir, "Unaligned*")
-    # e.g. 131030_SN7001362_0103_BC2PUYACXX/Unaligned_16bp/Project_J__Bjorkegren_13_02/
-    project_dir_pattern = os.path.join(unaligned_dir_pattern, "Project_*")
-    for project_dir in glob.glob(project_dir_pattern):
-        LOG.info('Parsing project directory "{}"...'.format(
-                            project_dir.split(os.path.split(fc_dir)[0] + "/")[1]))
-        project_name = os.path.basename(project_dir).replace('Project_', '').replace('__', '.')
-        project_samples = []
-        sample_dir_pattern = os.path.join(project_dir, "*")
-
-        # e.g. <Project_dir>/P680_356F_dual56/
-        for sample_dir in glob.glob(sample_dir_pattern):
-            LOG.info('Parsing samples directory "{}"...'.format(sample_dir.split(
-                                                os.path.split(fc_dir)[0] + "/")[1]))
-            sample_name = os.path.basename(sample_dir).replace('Sample_', '')
-            fastq_file_pattern = os.path.join(sample_dir, "*.fastq.gz")
-            fastq_files = [os.path.basename(fq) for fq in glob.glob(fastq_file_pattern)]
-
-            project_samples.append({'sample_dir': os.path.basename(sample_dir),
-                                    'sample_name': sample_name,
-                                    'files': fastq_files})
-        if not project_samples:
-            LOG.warn('No samples found for project "{}" in fc {}'.format(project_name, fc_dir))
-        else:
-            projects.append({'data_dir': os.path.relpath(os.path.dirname(project_dir), fc_dir),
-                             'project_dir': os.path.basename(project_dir),
-                             'project_name': project_name,
-                             'samples': project_samples})
-
-    if not projects:
-        raise ValueError('No projects or no projects with sample found in '
-                         'flowcell directory {}'.format(fc_dir))
+    c2_5_path = os.path.join(fc_dir, "Demultiplexing")
+    c1_8_path = os.path.join(fc_dir, "Unaligned*")
+    if os.path.exists(c2_5_path):
+        data_dir = c2_5_path
     else:
-        return {'fc_dir'    : fc_dir,
-                'fc_full_id': fc_full_id,
-                'projects': projects,
-                'samplesheet_path': samplesheet_path}
-
-def parse_bcl2fastq_2_5_directory(fc_dir):
-    """
-    Traverse a CASAVA 2.5 directory structure and return a dictionary
-    of the elements it contains.
-    The flowcell directory tree for these has (roughly) the structure:
-
-    ├── Demultiplexing
-    │   ├── J_Lundeberg_14_24
-    │   │   ├── P1775_112
-    │   │   ├── P1775_120
-    │   │   ├── P1775_128
-    │   │   ├── P1775_136
-    │   │   ├── P1775_144
-    │   │   ├── P1775_152
-    │   │   ├── P1775_160
-    │   │   └── P1775_168
-    │   └── Stats
-    ├── PeriodicSaveRates
-    └── Recipe
-
-    :param str fc_dir: The directory created for this flowcell.
-
-    :returns: A dict of information about the flowcell, including project/sample info
-    :rtype: dict
-
-    :raises OSError: If the fc_dir does not exist or cannot be accessed
-    """
-    projects = []
-    fc_dir = os.path.abspath(fc_dir)
-    if not os.access(fc_dir, os.F_OK): os_msg = "does not exist"
-    if not os.access(fc_dir, os.R_OK): os_msg = "could not be read (permission denied)"
-    if locals().get('os_msg'): raise OSError("Error with flowcell dir {}: directory {}".format(fc_dir, os_msg))
-    LOG.info('Parsing flowcell directory "{}"...'.format(fc_dir))
-    # SampleSheet.csv should be present but if it's not it's not the end of the world
-    try:
-        samplesheet_path = os.path.abspath(glob.glob(os.path.join(fc_dir, "SampleSheet.csv"))[0])
-        LOG.debug("SampleSheet.csv found at {}".format(samplesheet_path))
-    except IndexError:
-        LOG.warn("Could not find samplesheet in directory {}".format(fc_dir))
-        samplesheet_path = None
-    fc_full_id = os.path.basename(fc_dir)
-    data_dir_pattern = os.path.join(fc_dir, "Demultiplexing")
-    project_dir_pattern = os.path.join(data_dir_pattern, "*")
-    for project_dir in glob.glob(project_dir_pattern):
+        data_dir = c1_8_path
+    for project_dir in glob.glob(os.path.join(data_dir, "*")):
         path, base_dir = os.path.split(project_dir)
         if not base_dir: path, base_dir = os.path.split(path)
+        project_name = os.path.basename(base_dir).replace('Project_', '').replace('__', '.')
         if not (os.path.isdir(project_dir) and \
-                (UPPSALA_PROJECT_RE.match(base_dir) or \
-                   STHLM_PROJECT_RE.match(base_dir))):
+                (UPPSALA_PROJECT_RE.match(project_name) or \
+                   STHLM_PROJECT_RE.match(project_name))):
             continue
         LOG.info('Parsing project directory "{}"...'.format(
                             project_dir.split(os.path.split(fc_dir)[0] + "/")[1]))
         project_samples = []
         sample_dir_pattern = os.path.join(project_dir, "*")
-        project_name = os.path.basename(project_dir)
-        if STHLM_PROJECT_RE.match(project_name):
-            # We need to change J_Lundeberg_15_01 to J.Lundeberg_15_01
+        if STHLM_X_PROJECT_RE.match(project_name):
             project_name = project_name.replace('_', '.', 1)
-        # e.g. <Project_dir>/P680_356F_dual56/
         for sample_dir in glob.glob(sample_dir_pattern):
             LOG.info('Parsing samples directory "{}"...'.format(sample_dir.split(
                                                 os.path.split(fc_dir)[0] + "/")[1]))
-            sample_name = os.path.basename(sample_dir)
-            if sample_name.startswith('Sample_'):
-                sample_name=sample_name[7:]
+            sample_name = os.path.basename(sample_dir).replace('Sample_', '')
             fastq_file_pattern = os.path.join(sample_dir, "*.fastq.gz")
             fastq_files = [os.path.basename(fq) for fq in glob.glob(fastq_file_pattern)]
             project_samples.append({'sample_dir': os.path.basename(sample_dir),
