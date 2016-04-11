@@ -104,27 +104,32 @@ def locate_project(project, subdir="DATA", resolve_symlinks=True,
         return os.path.abspath(project)
     else:
         try:
-            project_data_dir=os.path.join(config["analysis"]["base_root"], config["analysis"]["sthlm_root"], config["analysis"]["top_dir"], subdir)
-            if not os.path.exists(project_data_dir):
-                project_data_dir=os.path.join(config["analysis"]["base_root"], config["analysis"]["upps_root"], config["analysis"]["top_dir"], subdir)
+            base_root = config["analysis"]["base_root"]
+            node_roots = [config["analysis"].get("sthlm_root"),
+                          config["analysis"].get("upps_root")]
+            top_dir = config["analysis"]["top_dir"]
         except (KeyError, TypeError) as e:
             raise ValueError('Path to project data directory not available in '
                              'config file (analysis.top_dir) and project '
                              'is not an absolute path ({}).'.format(project))
-        else:
-            project_dir = os.path.join(project_data_dir, project)
-        if not os.path.exists(project_dir):
-            raise ValueError('project directory passed as project name (not '
-                             'full path) and does not exist under project '
-                             'data directory as specified in configuration '
-                             'file (at {}).'.format(project_dir))
-        else:
-            if os.path.islink(project_dir):
-                try:
-                    return os.path.realpath(project_dir)
-                except OSError:
-                    pass
-            return project_dir
+        for node_root in node_roots:
+            if not node_root:
+                continue
+            project_dir = os.path.join(base_root, node_root, top_dir, subdir, project)
+            if os.path.exists(project_dir):
+                if os.path.islink(project_dir):
+                    try:
+                        return os.path.realpath(project_dir)
+                    except OSError as e:
+                        raise
+                return project_dir
+        raise ValueError('project directory passed as project name (not '
+                         'full path) and does not exist under project '
+                         'data directory as specified in configuration '
+                         'file (at {}).'.format(
+                            " or ".join([
+                                           os.path.join(base_root, node_root, top_dir, subdir, project)
+                                           for node_root in node_roots])))
 
 
 def execute_command_line(cl, shell=False, stdout=None, stderr=None, cwd=None):

@@ -197,7 +197,9 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
     if not restrict_to_projects: restrict_to_projects = []
     if not restrict_to_samples: restrict_to_samples = []
     config["quiet"] = quiet # Hack because I enter here from a script sometimes
-    pattern="(.+(?:{}|{}))\/.+".format(config["analysis"]["sthlm_root"], config["analysis"]["upps_root"])
+    pattern = "(.+(?:{}|{}))\/.+".format(
+        config["analysis"].get("sthlm_root", "this_is_not_a_valid_path"),
+        config["analysis"].get("upps_root", "this_is_not_a_valid_path"))
     matches=re.match(pattern, fc_dir)
     if matches:
         flowcell_root=matches.group(1)

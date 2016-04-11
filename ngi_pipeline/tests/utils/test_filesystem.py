@@ -19,7 +19,7 @@ class TestFilesystemUtils(unittest.TestCase):
     def test_locate_flowcell(self):
         flowcell_name = "temp_flowcell"
         tmp_dir = tempfile.mkdtemp()
-        config = {'environment': {'flowcell_inbox': tmp_dir}}
+        config = {'environment': {'flowcell_inbox': [tmp_dir]}}
         with self.assertRaises(ValueError):
             # Should raise ValueError if flowcell can't be found
             locate_flowcell(flowcell=flowcell_name, config=config)
@@ -42,24 +42,52 @@ class TestFilesystemUtils(unittest.TestCase):
     def test_locate_project(self):
         project_name = "temp_project"
         tmp_dir = tempfile.mkdtemp()
-        config = {'analysis': {'top_dir': tmp_dir}}
+        sub_dir = "DATA"
+        config = {'analysis': {
+            'top_dir': os.path.join('top', 'dir'),
+            'base_root': tmp_dir,
+            'sthlm_root': 'sthlm',
+            'upps_root': 'uppsala'}}
+
+        # raise a ValueError if a required key is missing from the config
+        for leave_out in ['top_dir', 'base_root', 'sthlm_root']:
+            with self.assertRaises(ValueError):
+                locate_project(project=project_name,
+                               config={'analysis': {k: v for k, v in config['analysis'] if k != leave_out}})
+
+        # Should raise ValueError if project can't be found
         with self.assertRaises(ValueError):
-            # Should raise ValueError if project can't be found
             locate_project(project=project_name, config=config)
 
-        tmp_project_path = os.path.join(tmp_dir, "DATA", project_name)
+        project_path = os.path.join(config['analysis']['base_root'],
+                                    config['analysis']['sthlm_root'],
+                                    config['analysis']['top_dir'],
+                                    sub_dir,
+                                    project_name)
         with self.assertRaises(ValueError):
-            # Should raise ValueError as path given doesn't exist
-            locate_project(project=tmp_project_path, config=config)
+            # Should raise ValueError if a given path doesn't exist
+            locate_project(project=project_path, config=config)
 
-        os.makedirs(tmp_project_path)
+        os.makedirs(project_path)
         # Should return the path passed in
-        self.assertEqual(locate_project(project=tmp_project_path, config=config),
-                         tmp_project_path)
+        self.assertEqual(locate_project(project=project_path, config=config),
+                         project_path)
 
         # Should return the full path after searching project data dir
-        self.assertEqual(locate_project(project=project_name, config=config),
-                         tmp_project_path)
+        self.assertEqual(locate_project(project=project_name, config=config, subdir=sub_dir),
+                         project_path)
+
+        # a project should be found also under the upps_root
+        project_name = "temp_upps_project"
+        project_path = os.path.join(config['analysis']['base_root'],
+                                    config['analysis']['upps_root'],
+                                    config['analysis']['top_dir'],
+                                    sub_dir,
+                                    project_name)
+        os.makedirs(project_path)
+        self.assertEqual(locate_project(project=project_name, config=config, subdir=sub_dir),
+                         project_path)
+
 
 
     def test_load_modules(self):
