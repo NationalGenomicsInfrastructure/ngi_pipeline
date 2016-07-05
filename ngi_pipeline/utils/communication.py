@@ -8,7 +8,7 @@ from ngi_pipeline.log.loggers import minimal_logger
 
 LOG = minimal_logger(__name__)
 
-def mail(recipient, subject, text, origin="ngi_pipeline@scilifelab.se"):
+def mail(recipient, subject, text, origin="seqmaster@scilifelab.se"):
     msg = MIMEText(text)
     msg['Subject'] = '[NGI_pipeline] {}'.format(subject)
     msg['From'] = origin
@@ -21,7 +21,7 @@ def mail(recipient, subject, text, origin="ngi_pipeline@scilifelab.se"):
 def mail_analysis(project_name, sample_name=None, engine_name=None,
                   level="ERROR", info_text=None, workflow=None,
                   recipient="ngi_pipeline_operators@scilifelab.se",
-                  subject=None, origin="ngi_pipeline@scilifelab.se",
+                  subject=None, origin="seqmaster@scilifelab.se",
                   config=None, config_file_path=None ):
 
     # check for mail recipient among the config values
