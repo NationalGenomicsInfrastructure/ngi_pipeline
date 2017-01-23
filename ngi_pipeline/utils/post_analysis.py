@@ -14,6 +14,14 @@ def run_multiqc(base_path, project_id, project_name, wait=False):
     multiqc_stdout=''
     multiqc_stderr=''
     try:
+        #if multiqc is already running, kill it first.
+        ps_command=["ps", "ux"]
+        pcs=subprocess.check_output(ps_command)
+        for line in pcs.splitlines():
+            if " ".join(command) in line :
+                os.kill(int(line.split()[1]), 9)
+
+        #then run multiqc
         handle=execute_command_line(command)
         if wait:
             (multiqc_stdout, multiqc_stderr)=handle.communicate()
