@@ -59,7 +59,14 @@ def _init_engine(database_path):
 def create_database_populate_schema(location):
     """Create the database and populate it with the schema."""
     engine = _init_engine(location)
-    # Create the tables
+    # Create the folder if necessary
+    if not os.path.exists( os.path.dirname(location) ):
+        try:
+            os.makedirs( os.path.dirname(location)) 
+        except (OSError):
+            LOG.info('Failed to create database directory at "{}", continuing without local database'.format(os.path.dirname(location)))
+            pass 
+    # Create the tables & sqlite file
     Base.metadata.create_all(engine)
     return engine
 

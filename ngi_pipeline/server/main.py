@@ -10,7 +10,9 @@ def start(port):
     """
     application = tornado.web.Application([(r"/flowcell_analysis/([^/]*)$", handlers.FlowcellHandler),
                                            (r"/status", handlers.StatusHandler),
-                                           (r"/test/([0-9]*)$", handlers.TestHandler)])
+                                           (r"/test/([0-9]*)$", handlers.TestHandler),
+                                           (r"/test_flowcell_analysis/([^/]*)$", handlers.TestFlowcellHandler)
+                                           ])
     application.runmonitor = RunMonitor()
     application.listen(port)
     tornado.ioloop.IOLoop.instance().start()

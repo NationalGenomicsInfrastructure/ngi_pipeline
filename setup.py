@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import glob
-
+from ngi_pipeline import __version__
 from setuptools import setup, find_packages
+
 
 try:
     with open("requirements.txt", "r") as f:
@@ -15,7 +16,7 @@ setup(name="ngi_pipeline",
       description = "Infrastructure/analysis pipeline scripts.",
       license = "MIT",
       url="https://github.com/scilifelab/scilifelab_pipeline",
-      version="0.1.0",
+      version=__version__,
       install_requires=install_requires,
       scripts = glob.glob('scripts/*py'),
       packages=find_packages()

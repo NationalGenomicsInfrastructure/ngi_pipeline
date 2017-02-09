@@ -23,7 +23,8 @@ from requests.exceptions import Timeout
 
 LOG = minimal_logger(__name__)
 
-def load_modules(modules_list):
+@with_ngi_config
+def load_modules(modules_list, config=None, config_file_path=None):
     """
     Takes a list of environment modules to load (in order) and
     loads them using modulecmd python load
@@ -39,7 +40,7 @@ def load_modules(modules_list):
     error_msgs = []
     for module in modules_list:
         # Yuck
-        lmod_location = "/usr/lib/lmod/lmod/libexec/lmod"
+        lmod_location=os.environ.get('LMOD_CMD', "/usr/lib/lmod/lmod/libexec/lmod")
         cl = "{lmod} python load {module}".format(lmod=lmod_location,
                                                   module=module)
         p = subprocess.Popen(shlex.split(cl), stdout=subprocess.PIPE,

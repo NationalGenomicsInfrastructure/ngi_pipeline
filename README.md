@@ -150,6 +150,7 @@ In general, analyses are triggered automatically through a REST API. An example 
     (Very soon this script will take as input mulitple flowcells, but now you know how bash arrays work. You're welcome!)
 
 
+
 Rerunning failed jobs
 ---------------------
 In the case a sample failed you can force the re-run:

@@ -1,0 +1,157 @@
+# An edited copy of this file should be placed under $HOME/.ngiconfig/ngi_config.yaml
+# or its path exported as the environment variable NGI_CONFIG
+
+analysis:
+    workflows:
+        NGI:
+            analysis_engine: ngi_pipeline.engines.piper_ngi
+        mate_pair:
+            analysis_engine: ngi_pipeline.engines.de_novo_pipeline
+        RNA:
+            analysis_engine: ngi_pipeline.engines.bcbio_ngi
+    best_practice_analysis:
+        whole_genome_reseq:
+            analysis_engine: ngi_pipeline.engines.piper_ngi
+        IGN:
+            analysis_engine: ngi_pipeline.engines.piper_ngi
+        qc:
+            analysis_engine: ngi_pipeline.engines.qc_ngi
+    # top_dir is the directory used by the pipeline as a starting point to build up the analysis run
+    # see ngi_pipeline/utils/filesystem.py for details.
+    # for nestor the default is /proj/a2014205/nobackup/NGI/analysis_ready
+    top_dir: /base/to/proj/a2014205/nobackup/NGI/analysis_ready
+    sthlm_root: a2014205 
+    upps_root: a2015179
+    # for nestor it is simply /proj
+    base_root: /base/to/proj
+
+database:
+    # SQLite file to know what/where/how things are happening (state machine to back up Charon for network failure)
+    # -at nestor it is at /proj/a2014205/ngi_resources/record_tracking_database_nestor.sql
+    # -if you are trying to work without one, it is going to create an empty schema that is
+    # sqlite> .fullschema
+    # CREATE TABLE sampleanalysis (
+    #         project_id VARCHAR(50) NOT NULL, 
+    #         project_name VARCHAR(50), 
+    #         project_base_path VARCHAR(100), 
+    #         sample_id VARCHAR(50) NOT NULL, 
+    #         workflow VARCHAR(50) NOT NULL, 
+    #         engine VARCHAR(50), 
+    #         analysis_dir VARCHAR(100), 
+    #         process_id INTEGER, 
+    #         slurm_job_id INTEGER, 
+    #         PRIMARY KEY (project_id, sample_id, workflow)
+    # );
+    # Compulsory to define: to make sure you are not overwriting the production version below, it is commented out, 
+    # forcing you to edit the config file
+    #record_tracking_db_path: /base/to/proj/a2014205/ngi_resources/record_tracking_database.sql
+
+environment:
+    project_id: a2014205
+    # directory containing scripts like ngi_pipeline_start.py, print_running_jobs.py etc
+    # on nestor the production code at /proj/a2014205/software/ngi_pipeline/scripts
+    ngi_scripts_dir:    /dir/to/ngi_scripts
+    conda_env: NGI
+    # Flowcell directories; the path string must contain the strings either /a2014205/ or /a2015179/
+    # see ngi_pipeline/ngi_pipeline/conductor/flowcell.py:setup_analysis_directory_structure() for details
+    # On nestor the default values should be /proj/a2014205/archive /proj/a2015179/archive
+    flowcell_inbox: 
+            - /dir/to/projects/a2014205/archive
+            - /dir/to/projects/a2015179/archive
+
+logging:
+    # the log file itself is compulsory to be defined, or you will get a nasty exception
+    # to make sure you are defining it, and not overwriting the production one below, it is left commented out
+    # default location is /proj/a2014205/ngi_resources/ngi_pipeline.log
+    #log_file: /base/to/proj/ngi_pipeline.log
+
+paths: # Hard code paths here if you are that kind of a person
+    binaries:
+        #bowtie2:
+        #fastqc:
+        #fastq_screen:
+    references:
+
+    #log: /base/to/proj/a2010002/data/log
+    #store_dir: /base/to/proj/a2010002/archive
+
+piper:
+    # The engine we are usually runnig - further engines should be configured also like this.
+    # Also can be set as an environmental variable $PIPER_QSCRIPTS_DIR
+    # nestor default location is /proj/a2014205/software/piper/qscripts
+    path_to_piper_qscripts: /base/to/proj/piper/qscripts
+    load_modules:
+        - java/sun_jdk1.7.0_25
+        - R/2.15.0
+    threads: 16
+    job_walltime:
+        merge_process_variantcall: "10-00:00:00"
+    #sample:
+    #    required_autosomal_coverage: 28.4
+    shell_jobrunner: Shell
+    #shell_jobrunner: ParallelShell --super_charge --ways_to_split 4
+    #jobNative:
+    #    - arg1
+    #    - arg2
+    #    - arg3
+
+qc:
+    # These qc modules are related to pre-analysis QC runs
+    load_modules:
+        - bioinfo-tools
+    fastqc:
+        load_modules:
+            - FastQC
+        threads: 16
+    fastq_screen:
+        config_path: "/proj/a2014205/ngi_resources/fastq_screen.nestor.conf"
+        load_modules:
+            - bowtie2
+            - fastq_screen
+        subsample_reads: 200000
+        threads: 1
+
+slurm:
+    extra_params:
+        "--qos": "seqver"
+    cores: 16
+
+supported_genomes:
+    #"GRCh37": "/apus/data/uppnex/reference/Homo_sapiens/GRCh37/concat/Homo_sapiens.GRCh37.57.dna.concat.fa"
+    "GRCh37": /proj/a2014205/piper_references/gatk_bundle/2.8/b37/human_g1k_v37.fasta
+    "GRCm38": "/apus/data/uppnex/reference/Mus_musculus/GRCm38/concat/Mus_musculus.GRCm38.69.dna.concat.fa"
+    "rn4": None
+    "saccer2": None
+    "dm3": None
+    "tair9": None
+    "xentro2": None
+    "ws210": None
+    "canfam3": None
+
+#project:
+#    INBOX: /proj/a2010002/archive
+
+test_data:
+    workflows:
+        whole_genome_reseq:
+            test_project:
+                project_id: P0000
+                project_name: "Y.Mom_15_01"
+                bpa: "whole_genome_reseq"
+            customize_config:
+                analysis:
+                    top_dir: /proj/a2014205/nobackup/NGI/test_data/
+                charon:
+                    charon_base_url: http://charon-dev.scilifelab.se
+            local_files:
+                flowcell: /proj/a2014205/nobackup/NGI/test_data/whole_genome_reseq/150424_ST-E00214_0031_BH2WY7CCXX
+                #project: /proj/a2014205/nobackup/NGI/test_data/whole_genome_reseq/DATA/P0000
+                vcf: /proj/a2014205/nobackup/NGI/test_data/whole_genome_reseq/vcf/
+
+mail:
+    # For testing you can change the default recipient here.
+    # By default (when this value is not set) mails are sent to
+    # "ngi_pipeline_operators@scilifelab.se" (see ngi_pipeline/utils/communication.py for details)
+    # If you do not want to have mails, use the "quiet" option like
+    #  scripts/print_running_jobs.py -q
+    recipient: user@scilifelab.se

@@ -15,7 +15,10 @@ from ngi_pipeline.engines.piper_ngi.utils import create_exit_code_file_path, \
                                                  create_project_obj_from_analysis_log, \
                                                  get_finished_seqruns_for_sample
 from ngi_pipeline.engines.piper_ngi.parsers import parse_genotype_concordance, \
-                                                   parse_mean_coverage_from_qualimap
+                                                   parse_mean_coverage_from_qualimap, \
+                                                   parse_deduplication_percentage,\
+                                                   parse_qualimap_reads,\
+                                                   parse_qualimap_coverage
 from ngi_pipeline.utils.slurm import get_slurm_job_status, \
                                      kill_slurm_job_by_id
 from ngi_pipeline.utils.parsers import STHLM_UUSNP_SEQRUN_RE, \
@@ -23,6 +26,7 @@ from ngi_pipeline.utils.parsers import STHLM_UUSNP_SEQRUN_RE, \
 from sqlalchemy.exc import IntegrityError, OperationalError
 from ngi_pipeline.utils.charon import recurse_status_for_sample
 from ngi_pipeline.utils.classes import with_ngi_config
+from ngi_pipeline.utils.post_analysis import run_multiqc
 
 
 LOG = minimal_logger(__name__)
@@ -34,6 +38,7 @@ def update_charon_with_local_jobs_status(quiet=False, config=None, config_file_p
     if quiet and not config.get("quiet"):
         config['quiet'] = True
     LOG.info("Updating Charon with the status of all locally-tracked jobs...")
+    multiqc_projects=set()
     with get_db_session() as session:
         charon_session = CharonSession()
         for sample_entry in session.query(SampleAnalysis).all():
@@ -112,6 +117,10 @@ def update_charon_with_local_jobs_status(quiet=False, config=None, config_file_p
                                               config=config)
                     # Job is only deleted if the Charon status update succeeds
                     session.delete(sample_entry)
+                    #add project to MultiQC
+                    multiqc_projects.add((project_base_path, project_id, project_name))
+
+
                     if workflow == "merge_process_variantcall":
                         # Parse seqrun output results / update Charon
                         # This is a semi-optional step -- failure here will send an
@@ -123,6 +132,10 @@ def update_charon_with_local_jobs_status(quiet=False, config=None, config_file_p
                                                     "02_preliminary_alignment_qc")
                         update_coverage_for_sample_seqruns(project_id, sample_id,
                                                            piper_qc_dir)
+                        update_sample_duplication_and_coverage(project_id, sample_id,
+                                                           project_base_path)
+
+                        
                     elif workflow == "genotype_concordance":
                         piper_gt_dir = os.path.join(project_base_path, "ANALYSIS",
                                                     project_id, "piper_ngi",
@@ -216,9 +229,8 @@ def update_charon_with_local_jobs_status(quiet=False, config=None, config_file_p
                             sample_status_field = seqrun_status_field = "genotype_status"
                             recurse_status = "UNDER_ANALYSIS"
                         try:
-                            charon_status = \
-                                    charon_session.sample_get(projectid=project_id,
-                                                              sampleid=sample_id).get(sample_status_field)
+                            remote_sample=charon_session.sample_get(projectid=project_id, sampleid=sample_id)
+                            charon_status = remote_sample.get(sample_status_field)
                             if charon_status and not charon_status == set_status:
                                 LOG.warn('Tracking inconsistency for {}: Charon status '
                                          'for field "{}" is "{}" but local process tracking '
@@ -257,6 +269,11 @@ def update_charon_with_local_jobs_status(quiet=False, config=None, config_file_p
                                   engine_name=engine, level="ERROR",
                                   workflow=workflow, info_text=error_text)
         session.commit()
+    #Run Multiqc
+    for pj_tuple in multiqc_projects:
+        LOG.info("Running MultiQC on project {}".format(pj_tuple[1]))
+        run_multiqc(pj_tuple[0], pj_tuple[1], pj_tuple[2])
+        
 
 
 
@@ -292,6 +309,53 @@ def update_gtc_for_sample(project_id, sample_id, piper_gtc_path, config=None, co
                                  **status_dict)
 
 @with_ngi_config
+def update_sample_duplication_and_coverage(project_id, sample_id, project_base_path,
+                                       config=None, config_file_path=None):
+    """Update Charon with the duplication rates for said sample.
+
+    :param str project_base_path: The path to the project dir 
+    :param str sample_id: The sample name (e.g. P1170_105)
+
+    """
+    
+    dup_file_path=os.path.join(project_base_path, 'ANALYSIS', project_id, 'piper_ngi', '05_processed_alignments', "{}.metrics".format(sample_id))
+    genome_results_file_path=os.path.join(project_base_path, 'ANALYSIS', project_id, 'piper_ngi', '06_final_alignment_qc', "{}.clean.dedup.qc".format(sample_id),"genome_results.txt")
+
+    try:
+        dup_pc=parse_deduplication_percentage(dup_file_path)
+    except:
+        dup_pc=0
+        LOG.error("Cannot find {}.metrics file for duplication rate at {}. Continuing.".format(sample_id, dup_file_path))
+    try:
+        cov=parse_qualimap_coverage(genome_results_file_path)
+        reads=parse_qualimap_reads(genome_results_file_path)
+    except IOError as e:
+        cov=0
+        reads=0
+        LOG.error("Cannot find genome_results.txt file for sample coverage at {}. Continuing.".format(genome_results_file_path))
+    try:
+        charon_session = CharonSession()
+        charon_session.sample_update(projectid=project_id,
+                                     sampleid=sample_id,
+                                     duplication_pc=dup_pc,
+                                     total_sequenced_reads=reads,
+                                     total_autosomal_coverage=cov)
+        LOG.info('Updating sample "{}" in '
+                 'Charon with mean duplication_percentage"{}" and autosomal coverage "{}"'.format(sample_id, dup_pc, cov))
+    except CharonError as e:
+        error_text = ('Could not update project/sample "{}/{}" '
+                    'in Charon with duplication rate : {}'
+                      'and coverage {}'.format("{}/{}".format(project_id, sampleid, dup_pc, cov)))
+        LOG.error(error_text)
+        if not config.get('quiet'):
+            mail_analysis(project_name=project_id, sample_name=sample_id,
+                          engine_name="piper_ngi", level="ERROR", info_text=error_text)
+
+
+
+
+
+@with_ngi_config
 def update_coverage_for_sample_seqruns(project_id, sample_id, piper_qc_dir,
                                        config=None, config_file_path=None):
     """Find all the valid seqruns for a particular sample, parse their
@@ -310,14 +374,26 @@ def update_coverage_for_sample_seqruns(project_id, sample_id, piper_qc_dir,
     for libprep_id, seqruns in seqruns_by_libprep.iteritems():
         for seqrun_id in seqruns:
             label = "{}/{}/{}/{}".format(project_id, sample_id, libprep_id, seqrun_id)
+            genome_results_file_paths=glob.glob(os.path.join(piper_qc_dir, "{}.{}*.qc".format(sample_id, seqrun_id.split('_')[-1]),"genome_results.txt"))
             ma_coverage = parse_mean_coverage_from_qualimap(piper_qc_dir, sample_id, seqrun_id)
+
+            reads=0
+            for path in genome_results_file_paths:
+                try:
+                    reads += parse_qualimap_reads(path)
+                except IOError as e :
+                    LOG.error("Cannot find the genome_results.txt file to get the number of reads in {}".format(path))
+                except :
+                    LOG.error("Error in handling the genome_results.txt file located at {}".format(path))
+
             LOG.info('Updating project/sample/libprep/seqrun "{}" in '
-                     'Charon with mean autosomal coverage "{}"'.format(label, ma_coverage))
+                     'Charon with mean autosomal coverage "{}" and total reads {}'.format(label, ma_coverage, reads))
             try:
                 charon_session.seqrun_update(projectid=project_id,
                                              sampleid=sample_id,
                                              libprepid=libprep_id,
                                              seqrunid=seqrun_id,
+                                             total_reads=reads,
                                              mean_autosomal_coverage=ma_coverage)
             except CharonError as e:
                 error_text = ('Could not update project/sample/libprep/seqrun "{}" '
@@ -368,12 +444,16 @@ def record_process_sample(project, sample, workflow_subtask, analysis_module_nam
         if workflow_subtask == "merge_process_variantcall":
             sample_status_field = "analysis_status"
             sample_status_value = "UNDER_ANALYSIS"
+            sample_data_status_field = "status"
+            sample_data_status_value = "STALE"
             seqrun_status_field = "alignment_status"
             seqrun_status_value = "RUNNING"
             extra_args = {"mean_autosomal_coverage": 0}
         elif workflow_subtask == "genotype_concordance":
             sample_status_field = seqrun_status_field = "genotype_status"
             sample_status_value = seqrun_status_value = "UNDER_ANALYSIS"
+            sample_data_status_field = "status"
+            sample_data_status_value = "STALE"
         else:
             raise ValueError('Charon field for workflow "{}" unknown; '
                              'cannot update Charon.'.format(workflow_subtask))
@@ -382,7 +462,8 @@ def record_process_sample(project, sample, workflow_subtask, analysis_module_nam
                      '{}/{} key : {} value : {}'.format(project, sample, sample_status_field, sample_status_value))
             CharonSession().sample_update(projectid=project.project_id,
                                           sampleid=sample.name,
-                                          **{sample_status_field: sample_status_value})
+                                          **{sample_status_field: sample_status_value,
+                                              sample_data_status_field: sample_data_status_value})
             project_obj = create_project_obj_from_analysis_log(project.name,
                                                                project.project_id,
                                                                project.base_path,
@@ -519,3 +600,4 @@ def get_exit_code(workflow_name, project_base_path, project_name, project_id,
         raise ValueError('Could not determine job exit status: not an integer ("{}")'.format(e))
     else:
         return None
+

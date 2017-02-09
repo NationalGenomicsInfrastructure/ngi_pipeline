@@ -9,8 +9,8 @@ analysis:
         qc:
             analysis_engine: ngi_pipeline.engines.qc_ngi
     top_dir: nobackup/NGI/analysis_ready
-    sthlm_root: 2014205
-    upps_root: 2015179
+    sthlm_root: a2014205
+    upps_root: a2015179
     base_root: /proj
 
 
@@ -49,6 +49,8 @@ piper:
         - java/sun_jdk1.7.0_25
         - R/2.15.0
     threads: 16
+    job_walltime:
+        merge_process_variantcall: "10-00:00:00"
     shell_jobrunner: Shell
     #shell_jobrunner: ParallelShell --super_charge --ways_to_split 4
     #jobNative:
@@ -97,3 +99,10 @@ test_data:
                 flowcell: /proj/a2014205/nobackup/NGI/test_data/whole_genome_reseq/150424_ST-E00214_0031_BH2WY7CCXX
                 #project: /proj/a2014205/nobackup/NGI/test_data/whole_genome_reseq/DATA/P0000
                 vcf: /proj/a2014205/nobackup/NGI/test_data/whole_genome_reseq/vcf/
+mail:
+    # For testing you can change the default recipient here.
+    # By default (when this value is not set) mails are sent to
+    # "ngi_pipeline_operators@scilifelab.se" (see ngi_pipeline/utils/communication.py for details)
+    # If you do not want to have mails, use the "quiet" option like
+    #  scripts/print_running_jobs.py -q
+    recipient: ngi_pipeline_operators@scilifelab.se

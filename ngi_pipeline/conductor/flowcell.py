@@ -26,8 +26,8 @@ from ngi_pipeline.utils.parsers import determine_library_prep_from_fcid, \
 LOG = minimal_logger(__name__)
 
 UPPSALA_PROJECT_RE = re.compile(r'(\w{2}-\d{4}|\w{2}\d{2,3})')
-STHLM_PROJECT_RE = re.compile(r'[A-z]{1,2}[_.][A-z0-9]+_\d{2}_\d{2}')
-STHLM_X_PROJECT_RE = re.compile(r'[A-z]{1,2}_[A-z0-9]+_\d{2}_\d{2}')
+STHLM_PROJECT_RE = re.compile(r'[A-z]+[_.][A-z0-9]+_\d{2}_\d{2}')
+STHLM_X_PROJECT_RE = re.compile(r'[A-z]+_[A-z0-9]+_\d{2}_\d{2}')
 
 
 ## TODO we should just remove this function
@@ -197,17 +197,16 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
     if not restrict_to_projects: restrict_to_projects = []
     if not restrict_to_samples: restrict_to_samples = []
     config["quiet"] = quiet # Hack because I enter here from a script sometimes
-    pattern = "(.+(?:{}|{}))\/.+".format(
-        config["analysis"].get("sthlm_root", "this_is_not_a_valid_path"),
-        config["analysis"].get("upps_root", "this_is_not_a_valid_path"))
+    #Checks flowcell path to establish which group owns it
+    pattern=".+({}|{})\/.+".format(config["analysis"]["sthlm_root"], config["analysis"]["upps_root"])
     matches=re.match(pattern, fc_dir)
     if matches:
-        flowcell_root=matches.group(1)
+        flowcell_uppnexid=matches.group(1)
     else:
-        LOG.error("cannot guess which project the flowcell {} belongs to".format(fc_dir))
+        LOG.error("cannot guess which project (sthlm/uppsala) the flowcell {} belongs to".format(fc_dir))
         raise RuntimeError
 
-    analysis_top_dir = os.path.abspath(os.path.join(flowcell_root,config["analysis"]["top_dir"]))
+    analysis_top_dir = os.path.abspath(os.path.join(config["analysis"]["base_root"],flowcell_uppnexid,config["analysis"]["top_dir"]))
     try:
         safe_makedir(analysis_top_dir)
     except OSError as e:
@@ -358,12 +357,12 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
                     for seqrun_obj in libprep_obj:
                         src_fastq_files = [os.path.join(src_sample_dir, fastq_file) for
                                            fastq_file in seqrun_obj.fastq_files]
-                        seqrun_dst_dir = os.path.join(project_obj.base_path, project_obj.dirname,
+                        seqrun_dst_dir = os.path.join(project_obj.base_path, "DATA", project_obj.dirname,
                                                       sample_obj.dirname, libprep_obj.dirname,
                                                       seqrun_obj.dirname)
-                        LOG.info("Symlinking fastq files from {} to {}...".format(src_sample_dir, seqrun_dir))
+                        LOG.info("Symlinking fastq files from {} to {}...".format(src_sample_dir, seqrun_dst_dir))
                         try:
-                            do_symlink(src_fastq_files, seqrun_dir)
+                            do_symlink(src_fastq_files, seqrun_dst_dir)
                         except OSError:
                             error_text = ('Could not symlink files for project/sample'
                                           'libprep/seqrun {}/{}/{}/{}'.format(project_obj,

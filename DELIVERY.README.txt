@@ -63,10 +63,8 @@ Contains two type of reports, snpEff summary and sample report.
    |--SampleN
       |--00-Report
          |--SampleID_ign_sample_report.html
-         |--SampleID.clean.dedup.recal.bam.recalibrated.indel.annotated.vcf.gz.snpEff.summary.csv
-         |--SampleID.clean.dedup.recal.bam.recalibrated.indel.annotated.vcf.gz.snpEff.summary.genes.txt
-         |--SampleID.clean.dedup.recal.bam.recalibrated.snp.annotated.vcf.gz.snpEff.summary.csv
-         |--SampleID.clean.dedup.recal.bam.recalibrated.snp.annotated.vcf.gz.snpEff.summary.genes.txt
+         |--SampleID.clean.dedup.recal.bam.raw.annotated.vcf.gz.snpEff.summary.csv
+         |--SampleID.clean.dedup.recal.bam.raw.annotated.vcf.gz.snpEff.summary.genes.txt
 
 --snpEff summary report
 SnpEff generated reports, summary.csv shows basic statistics about the
@@ -133,12 +131,8 @@ Contains the final VCF files and indexes, in total 6 files.
 Genomic VCF (gVCF) (and index file) containing sequencing information for both
 variant and non-variant positions. Can be used for downstream cohort calling.
 
---SampleN.clean.dedup.recal.bam.recalibrated.indel.annotated.vcf.gz
---SampleN.clean.dedup.recal.bam.recalibrated.indel.annotated.vcf.gz.tbi
-VCF file containing indel variants called from the recalibrated BAM file and
+--SampleN.clean.dedup.recal.bam.raw.annotated.vcf.gz
+--SampleN.clean.dedup.recal.bam.raw.annotated.vcf.gz.tbi
+VCF file containing variants called from the recalibrated BAM file and
 annotated with variation effects generated with snpEff.
 
---SampleN.clean.dedup.recal.bam.recalibrated.snp.annotated.vcf.gz
---SampleN.clean.dedup.recal.bam.recalibrated.snp.annotated.vcf.gz.tbi
-VCF file containing snp variants called from the recalibrated BAM file and
-annotated with variation effects generated with snpEff.

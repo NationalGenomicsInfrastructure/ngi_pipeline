@@ -72,6 +72,14 @@ class TestHandler(tornado.web.RequestHandler):
         self.write(run_id)
 
 
+class TestFlowcellHandler(tornado.web.RequestHandler):
+
+    def get(self, runfolder_name):
+        if not runfolder_name:
+            raise AttributeError("Need to provide a runfolder name")
+        self.write("Test started: {}".format(runfolder_name))
+        self.finish()
+
 
 class StatusHandler(tornado.web.RequestHandler):
     def get(self):

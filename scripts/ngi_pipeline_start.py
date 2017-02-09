@@ -313,7 +313,7 @@ if __name__ == "__main__":
                                       generate_bqsr_bam=args.generate_bqsr_bam)
 
     elif 'delete_proj_analysis' in args:
-        from ngi_pipeline.conductor.launchers import get_engine_for_bp
+        from ngi_pipeline.conductor.classes import get_engine_for_bp
         delete_proj_analysis_list = list(set(args.delete_proj_analysis))
         for delete_proj_analysis in delete_proj_analysis_list:
             if args.restrict_to_samples:

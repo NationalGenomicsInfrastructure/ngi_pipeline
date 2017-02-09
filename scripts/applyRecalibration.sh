@@ -63,8 +63,8 @@ java -Xmx14G -jar ${GATK_HOME}/GenomeAnalysisTK.jar \
 -nct 2 \
 -o ${BAMOUT}
 
-# move results back from compute node
+# copy results back from compute node
 if [ ! -z "$SLURM_JOB_ID" ]
 then
-  mv "${BAMOUT}" "`dirname ${BAMIN}`"
+  cp "${BAMOUT}" "`dirname ${BAMIN}`"
 fi
