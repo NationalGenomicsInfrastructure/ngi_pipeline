@@ -26,7 +26,6 @@ from ngi_pipeline.utils.parsers import STHLM_UUSNP_SEQRUN_RE, \
 from sqlalchemy.exc import IntegrityError, OperationalError
 from ngi_pipeline.utils.charon import recurse_status_for_sample
 from ngi_pipeline.utils.classes import with_ngi_config
-from ngi_pipeline.utils.post_analysis import run_multiqc
 
 
 LOG = minimal_logger(__name__)
@@ -269,10 +268,6 @@ def update_charon_with_local_jobs_status(quiet=False, config=None, config_file_p
                                   engine_name=engine, level="ERROR",
                                   workflow=workflow, info_text=error_text)
         session.commit()
-    #Run Multiqc
-    for pj_tuple in multiqc_projects:
-        LOG.info("Running MultiQC on project {}".format(pj_tuple[1]))
-        run_multiqc(pj_tuple[0], pj_tuple[1], pj_tuple[2])
         
 
 
