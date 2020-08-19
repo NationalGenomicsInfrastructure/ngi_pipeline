@@ -128,6 +128,15 @@ class ReferenceGenome(object):
         except IndexError:
             raise ReferenceGenomeNotRecognized(genome_name)
 
+    def get_genomes_base_path(self, config):
+        """
+        Return the genomes_base path specified in the config for this reference genome or None if not specified
+
+        :param config: a sarek config dict to look for the genomes_base path parameter in
+        :return: the corresponding genomes_base path as a string or None if not found
+        """
+        return config.get("genomes_base_paths", {}).get(self.NAME)
+
 
 class GRCh37(ReferenceGenome):
     """Class representing the GRCh37 reference genome"""

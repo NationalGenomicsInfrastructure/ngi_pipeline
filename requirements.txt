@@ -4,13 +4,12 @@ click
 CouchDB>=0.9
 coverage>=3.7.1
 dicttoxml>=1.5.5
-importlib>=1.0.3
 inflect>=0.2.5
 ipdb>=0.8
-ipython>=2.1.0,<=5.3.0
+ipython>=5.1.0,<=5.3.0
 Logbook>=0.7.0
 psutil>=2.1.1
-pyexcel
+pyexcel<=0.5.15
 pyexcel-xlsx
 python-dateutil>=1.5
 PyVCF

@@ -101,16 +101,13 @@ piper:
     #    - arg3
 
 sarek:
-    profile: slurm
-    nf_path: /lupus/ngi/staging/latest/sw/nextflow/nextflow
-    sarek_path: /lupus/ngi/staging/latest/sw/sarek
-    containerPath: /lupus/ngi/staging/latest/resources/singularity/sarek
-    config: /lupus/ngi/staging/latest/conf/sarek_upps.config
-    tag: 2.0.0
-    genome_base: /sw/data/uppnex/ToolBox/hg38bundle
+    tag: 2.6
     tools:
-      - haplotypecaller
-      - snpeff
+        - haplotypecaller
+        - snpeff
+    genomes_base_paths:
+        GRCh37: /sw/data/uppnex/ToolBox/ReferenceAssemblies/hg38make/bundle/2.8/b37/
+        GRCh38: /sw/data/uppnex/ToolBox/hg38bundle/
 
 qc:
     # These qc modules are related to pre-analysis QC runs

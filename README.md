@@ -182,3 +182,16 @@ gt_concordance:
     # this one is only required for a custom config file (not ngi_config)
     ANALYSIS_PATH: /proj/ngi2016003/nobackup/NGI/ANALYSIS
 ```
+
+Docker/Singularity image
+========================
+A recipe for building Docker and Singularity containers is provided in the `docker` subdirectory. This image is mainly 
+useful for development as it enables testing the code in an isolated environment. 
+
+To build the Docker and Singularity images, run the `docker/build_docker_and_singularity.sh` script.
+
+To invoke the `ngi_pipeline` in a Singularity image on Irma, use (and modify as needed) the 
+`docker/singularity_ngi_pipeline.sh` wrapper.
+
+Note that when running in containers, the pipeline will not be able to access e.g. the SLURM scheduler, so you won't be 
+able to actually launch analyses that are managed by Slurm.

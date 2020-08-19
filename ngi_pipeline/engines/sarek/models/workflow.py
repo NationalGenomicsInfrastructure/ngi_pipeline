@@ -5,34 +5,17 @@ from ngi_pipeline.engines.sarek.exceptions import ParserException
 from ngi_pipeline.engines.sarek.parsers import QualiMapParser, PicardMarkDuplicatesParser
 
 
-class SarekWorkflowStep(object):
+class WorkflowStep(object):
     """
-    The SarekWorkflowStep class represents an analysis step in the Sarek workflow. Primarily, it provides a method for
-    creating the step-specific command line.
+    The WorkflowStepMixin is a basic utility class that provides functionality needed by workflow steps.
     """
-
-    available_tools = []
-
-    def __init__(
-            self,
-            path_to_nextflow,
-            path_to_sarek,
-            **sarek_args):
-        """
-        Create a SarekWorkflowStep instance according to the passed parameters.
-
-        :param path_to_nextflow: path to the nextflow executable
-        :param path_to_sarek: path to the main Sarek folder
-        :param sarek_args: additional Sarek parameters to be included on the command line
-        """
-        self.nf_path = path_to_nextflow
-        self.sarek_path = path_to_sarek
+    def __init__(self, command, hyphen="--", **kwargs):
         # create a dict with parameters based on the passed key=value arguments
-        self.sarek_args = {k: v for k, v in sarek_args.items() if k not in ["nf_path", "sarek_path"]}
-        # add/filter a tools parameter against the valid tools for the workflow step
-        self.sarek_args["tools"] = self.valid_tools(self.sarek_args.get("tools", []))
         # expand any parameters passed as list items into a ","-separated string
-        self.sarek_args = {k: v if type(v) is not list else ",".join(v) for k, v in self.sarek_args.items()}
+        self.command = command
+        self.hyphen = hyphen
+        self.parameters = dict()
+        self.parameters = {k: v if type(v) is not list else ",".join(v) for k, v in kwargs.items()}
 
     def _append_argument(self, base_string, name, hyphen="--"):
         """
@@ -49,47 +32,71 @@ class SarekWorkflowStep(object):
         :return: the supplied string with an appended argument name and placeholder
         """
         # NOTE: a numeric value of 0 will be excluded (as will a boolean value of False)!
-        if not self.sarek_args.get(name):
+        if not self.parameters.get(name):
             return base_string
         return "{0} {2}{1} ${{{1}}}".format(base_string, name, hyphen)
 
     def command_line(self):
         """
-        Generate the command line for launching this analysis workflow step. The command line will be built using the
-        Sarek arguments passed to the step's constructor and returned as a string.
+        Generate the command line for launching a analysis workflow step based on the parameters. The command line will
+        be built using the arguments passed to the step's constructor and returned as a string.
 
         :return: the command line for the workflow step as a string
         """
-        single_hyphen_args = ["config", "profile"]
-        template_string = "${nf_path} run ${sarek_step_path}"
-        for argument_name in single_hyphen_args:
-            template_string = self._append_argument(template_string, argument_name, hyphen="-")
-        for argument_name in filter(lambda n: n not in single_hyphen_args, self.sarek_args.keys()):
-            template_string = self._append_argument(template_string, argument_name, hyphen="--")
+        template_string = "${command}"
+        for argument_name in self.parameters.keys():
+            template_string = self._append_argument(template_string, argument_name, hyphen=self.hyphen)
         command_line = Template(template_string).substitute(
-            nf_path=self.nf_path,
-            sarek_step_path=os.path.join(self.sarek_path, self.sarek_step()),
-            **self.sarek_args)
+            command=self.command,
+            **self.parameters)
         return command_line
-
-    def sarek_step(self):
-        raise NotImplementedError("The Sarek workflow step definition for {} has not been defined".format(type(self)))
-
-    def valid_tools(self, tools):
-        """
-        Filter a list of tools against the list of available tools for the analysis step.
-
-        :param tools: a list of tool names
-        :return: a list of tool names valid for this workflow step
-        """
-        return list(filter(lambda t: t in self.available_tools, tools))
 
     @classmethod
     def report_files(cls, analysis_sample):
         return []
 
 
-class SarekPreprocessingStep(SarekWorkflowStep):
+class NextflowStep(WorkflowStep):
+    """
+    The Nextflow command is implemented as a subclass of workflow step as well.
+    """
+
+    def __init__(self, command, subcommand, **kwargs):
+        """
+        Create a NextlowStep instance
+
+        :param command: the command used to invoke Nextflow
+        :param subcommand: the subcommand to pass to Nextflow (e.g. run)
+        :param kwargs: additional Nextflow parameters to be specified on the command line
+        """
+        super(NextflowStep, self).__init__("{} {}".format(command, subcommand), hyphen="-", **kwargs)
+
+
+class SarekWorkflowStep(WorkflowStep):
+    """
+    The SarekWorkflowStep class represents an analysis step in the Sarek workflow. Primarily, it provides a method for
+    creating the step-specific command line.
+    """
+
+    available_tools = []
+
+    def __init__(self, command, **kwargs):
+        """
+        Create a SarekWorkflowStep instance according to the passed parameters.
+
+        :param command: the command used to invoke sarek (i.e. the path to the relevant nextflow script)
+        :param kwargs: additional Sarek parameters to be included on the command line
+        """
+        super(SarekWorkflowStep, self).__init__(command, hyphen="--", **kwargs)
+
+    def sarek_step(self):
+        raise NotImplementedError("The Sarek workflow step definition for {} has not been defined".format(type(self)))
+
+
+class SarekMainStep(SarekWorkflowStep):
+    """
+    Create a class instance representing the main Sarek workflow step.
+    """
 
     def sarek_step(self):
         return "main.nf"
@@ -103,7 +110,10 @@ class SarekPreprocessingStep(SarekWorkflowStep):
         :return: a list of tuples where the first element is a parser class instance and the second is the path to the
         result file that the parser instance should parse
         """
-        report_dir = os.path.join(analysis_sample.sample_analysis_path(), "Reports")
+        report_dir = os.path.join(
+            analysis_sample.sample_analysis_results_dir(),
+            "Reports",
+            analysis_sample.sampleid)
         # MarkDuplicates output files may be named differently depending on if the pipeline was started with a single
         # fastq file pair or multiple file pairs
         markdups_dir = os.path.join(report_dir, "MarkDuplicates")
@@ -122,33 +132,3 @@ class SarekPreprocessingStep(SarekWorkflowStep):
             [
                 PicardMarkDuplicatesParser,
                 os.path.join(markdups_dir, markdups_metrics_file)]]
-
-
-class SarekGermlineVCStep(SarekWorkflowStep):
-
-    available_tools = [
-        "haplotypecaller",
-        "strelka",
-        "manta"
-    ]
-
-    def sarek_step(self):
-        return "germlineVC.nf"
-
-
-class SarekAnnotateStep(SarekWorkflowStep):
-
-    available_tools = [
-        "snpeff",
-        "vep"
-    ]
-
-    def sarek_step(self):
-        return "annotate.nf"
-
-
-class SarekMultiQCStep(SarekWorkflowStep):
-
-    def sarek_step(self):
-        return "runMultiQC.nf"
-

@@ -196,7 +196,7 @@ class SlurmConnector(ProcessConnector):
     SLURM_DEFAULTS = {
         "slurm_partition": "core",
         "slurm_nodes": 1,
-        "slurm_cores": 1,
+        "slurm_cores": 8,
         "slurm_job_time": "72:00:00",
         "slurm_mail_events": "NONE"
     }

@@ -5,8 +5,7 @@ from ngi_pipeline.engines.sarek.database import CharonConnector, TrackingConnect
 from ngi_pipeline.engines.sarek.exceptions import BestPracticeAnalysisNotRecognized, SampleNotValidForAnalysisError
 from ngi_pipeline.engines.sarek.models.resources import ReferenceGenome
 from ngi_pipeline.engines.sarek.models.sample import SarekAnalysisSample
-from ngi_pipeline.engines.sarek.models.workflow import SarekPreprocessingStep, SarekGermlineVCStep, SarekAnnotateStep, \
-    SarekMultiQCStep
+from ngi_pipeline.engines.sarek.models.workflow import NextflowStep, SarekMainStep
 from ngi_pipeline.engines.sarek.parsers import ParserIntegrator
 from ngi_pipeline.engines.sarek.process import ProcessConnector, ProcessRunning, ProcessExitStatusSuccessful, \
     ProcessExitStatusFailed
@@ -22,12 +21,19 @@ class SarekAnalysis(object):
     """
 
     DEFAULT_CONFIG = {
-        "profile": "standard",
-        "tools": None,
-        "config": None,
-        "sarek_path": "/lupus/ngi/production/latest/sw/sarek/",
-        "nf_path": "/lupus/ngi/production/latest/sw/nextflow/nextflow",
-        "containerPath": "/lupus/ngi/production/latest/resources/containers/sarek"
+        "nextflow": {
+            "profile": "uppmax",
+            "command": "nextflow",
+            "subcommand": "run"},
+        "sarek": {
+            "command": os.path.join(
+                "/lupus",
+                "ngi",
+                "production",
+                "latest",
+                "sw",
+                "sarek",
+                "workflow")}
     }
 
     def __init__(
@@ -54,7 +60,9 @@ class SarekAnalysis(object):
         self.reference_genome = reference_genome
         self.config = config
         self.log = log
-        self.sarek_config = self.configure_analysis(genome=self.reference_genome)
+        merged_configs = self.configure_analysis(opts={"sarek": {"genome": self.reference_genome}})
+        self.sarek_config = merged_configs["sarek"]
+        self.nextflow_config = merged_configs["nextflow"]
         self.charon_connector = charon_connector or CharonConnector(self.config, self.log)
         self.tracking_connector = tracking_connector or TrackingConnector(self.config, self.log)
         self.process_connector = process_connector or ProcessConnector(cwd=os.curdir)
@@ -63,10 +71,10 @@ class SarekAnalysis(object):
         # returns the name of the instance type, e.g. "SarekAnalysis" or "SarekGermlineAnalysis"
         return type(self).__name__
 
-    def configure_analysis(self, config=None, **opts):
+    def configure_analysis(self, config=None, opts=None):
         """
-        Put together the Sarek config dict based on the default parameters in the class, updated with any options passed
-        as well as the "sarek" section in a supplied config
+        Put together the process config dict based on the default parameters in the class, updated with any options
+        passed as well as the corresponding section (e.g. "sarek", "nextflow") in a supplied config
 
         :param config: a config dict. If specified, any content stored under the "sarek" key will be included in the
         returned dict
@@ -74,10 +82,45 @@ class SarekAnalysis(object):
         :return: a config dict based on the default values and updated with the passed parameters
         """
         config = config or self.config
-        sarek_config = self.DEFAULT_CONFIG.copy()
-        sarek_config.update(opts)
-        sarek_config.update(config.get("sarek", {}))
-        return sarek_config
+        opts = opts or dict()
+        merged_configs = dict()
+        for section in ["sarek", "nextflow"]:
+            merged_configs[section] = self.merge_configs(
+                self.DEFAULT_CONFIG.get(section, dict()),
+                config.get(section, dict()),
+                **opts.get(section, dict())
+            )
+
+        # make sure to configure the correct genomes_base parameter if it's not set
+        if self.reference_genome is not None:
+            merged_configs["sarek"]["genomes_base"] = merged_configs["sarek"].get(
+                "genomes_base",
+                self.reference_genome.get_genomes_base_path(merged_configs["sarek"]))
+        # let's unset the genomes_base_paths item since we don't want it to show up on the command line
+        try:
+            del(merged_configs["sarek"]["genomes_base_paths"])
+        except KeyError:
+            pass
+        return merged_configs
+
+    @staticmethod
+    def merge_configs(default_config, global_config, **local_config):
+        """
+        Merge multiple configs together along with passed keyword arguments (local config). The order of precedence is
+        local_config > global_config > default_config
+
+        :param default_config: a dict having arguments as key/value pairs. Keys overlapping with global_config or
+        local_config will be overridden
+        :param global_config: a dict having arguments as key/value pairs. Keys overlapping with local_config will be
+        overridden
+        :param local_config: additional keyword arguments will be added as key/value pairs. Keys overlapping with the
+        default or global configs will override those.
+        :return: a config dict based on the default values and updated with the passed config and parameters
+        """
+        config = default_config.copy()
+        config.update(global_config)
+        config.update(local_config)
+        return config
 
     @staticmethod
     def get_analysis_type_for_workflow(workflow):
@@ -344,6 +387,21 @@ class SarekAnalysis(object):
                 "" if should_be_started else " NOT"))
         return should_be_started
 
+    def processing_steps(self, analysis_sample):
+        """
+        Configure and get a list of the processing steps included in the analysis. Subclasses may call this and add
+        additional steps as needed.
+
+        :param analysis_sample: the SarekAnalysisSample to analyze
+        :return: a list of the processing steps included in the analysis
+        """
+
+        return [
+            NextflowStep(
+                self.nextflow_config.get("command", "nextflow"),
+                self.nextflow_config.get("subcommand", "run"),
+                **{k: v for k, v in self.nextflow_config.items() if k != "command" and k != "subcommand"})]
+
     def command_line(self, analysis_sample):
         raise NotImplementedError("command_line should be implemented in the subclasses")
 
@@ -416,6 +474,10 @@ class SarekAnalysis(object):
     def sample_analysis_work_dir(cls, *args):
         return os.path.join(cls.sample_analysis_path(*args), "work")
 
+    @classmethod
+    def sample_analysis_results_dir(cls, *args):
+        return os.path.join(cls.sample_analysis_path(*args), "results")
+
 
 class SarekGermlineAnalysis(SarekAnalysis):
     """
@@ -430,17 +492,18 @@ class SarekGermlineAnalysis(SarekAnalysis):
         :param analysis_sample: the SarekAnalysisSample to analyze
         :return: a list of the processing steps included in the analysis
         """
-        # get the path to the nextflow executable and the sarek main script. If not present in the config, rely on the
-        # environment to be aware of them
-        step_args = [
-            self.sarek_config.get("nf_path", "nextflow"),
-            self.sarek_config.get("sarek_path", "sarek")]
-        local_sarek_config = {"outDir": analysis_sample.sample_analysis_path()}
-        local_sarek_config.update(self.sarek_config)
-        return [SarekPreprocessingStep(
-            *step_args, sample=analysis_sample.sample_analysis_tsv_file(), **local_sarek_config)] + map(
-            lambda step: step(*step_args, **local_sarek_config),
-            [SarekGermlineVCStep, SarekAnnotateStep])
+        local_sarek_config = {
+            "outdir": analysis_sample.sample_analysis_results_dir()}
+        local_sarek_config.update({k: v for k, v in self.sarek_config.items() if k != "command"})
+        processing_steps = super(
+            SarekGermlineAnalysis,
+            self).processing_steps(analysis_sample)
+        processing_steps.append(
+            SarekMainStep(
+                self.sarek_config.get("command"),
+                input=analysis_sample.sample_analysis_tsv_file(),
+                **local_sarek_config))
+        return processing_steps
 
     def command_line(self, analysis_sample):
         """
@@ -452,7 +515,7 @@ class SarekGermlineAnalysis(SarekAnalysis):
         """
         # each analysis step is represented by a SarekWorkflowStep instance
         # create the command line by chaining the command lines from each processing step
-        return " && ".join(
+        return " ".join(
             map(lambda step: step.command_line(), self.processing_steps(analysis_sample)))
 
     def generate_tsv_file_contents(self, analysis_sample):

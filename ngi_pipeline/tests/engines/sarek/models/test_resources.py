@@ -13,6 +13,19 @@ class TestReferenceGenome(unittest.TestCase):
         with self.assertRaises(ReferenceGenomeNotRecognized):
             ReferenceGenome.get_instance("unknown")
 
+    def test_get_genomes_base_path(self):
+        genomes_base_paths = {
+            "GRCh37": os.path.join("this", "is", "the", "path", "to", "GRCh37"),
+            "GRCh38": os.path.join("this", "is", "the", "path", "to", "GRCh38")
+        }
+        for ref, expected_path in genomes_base_paths.items():
+            self.assertEqual(
+                expected_path,
+                ReferenceGenome.get_instance(ref).get_genomes_base_path(
+                    {"genomes_base_paths": genomes_base_paths}))
+        self.assertIsNone(
+            ReferenceGenome.get_instance("GRCh37").get_genomes_base_path({}))
+
 
 class TestSampleFastq(unittest.TestCase):
 

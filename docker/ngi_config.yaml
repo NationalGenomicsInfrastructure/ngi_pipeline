@@ -1,0 +1,127 @@
+# This file should be placed under $HOME/.ngiconfig/ngi_config.yaml
+# or its path exported as the environment variable NGI_CONFIG
+
+database:
+    record_tracking_db_path: /data/ngi2016000/private/db/records_db.sql
+
+environment:
+    project_id: ngi2016000
+    ngi_scripts_dir: /ngi_pipeline/scripts 
+    conda_env: NGI
+    flowcell_inbox:
+            - /data/ngi2016000/incoming
+ 
+piper:
+    #sample:
+    #    required_autosomal_coverage: 28.4
+    load_modules:
+        - bioinfo-tools piper/1.5.1
+    threads: 16
+    job_walltime:
+        merge_process_variantcall: "10-00:00:00"
+    shell_jobrunner: Shell
+    #shell_jobrunner: ParallelShell --super_charge --ways_to_split 4
+    #jobNative:
+    #    - arg1
+    #    - arg2
+    #    - arg3
+    # TODO: Piper module adds setupfilecreator to the path; unsure if this works or if complete path is required.  
+    path_to_setupfilecreator: setupfilecreator
+    gatk_key: "/path/to/gatk.key"
+
+sarek:
+    tag: 2.6.1
+    tools:
+      - haplotypecaller
+      - snpeff
+    genomes_base_paths:
+        GRCh37: /sw/data/uppnex/ToolBox/ReferenceAssemblies/hg38make/bundle/2.8/b37/
+        GRCh38: /sw/data/uppnex/ToolBox/hg38bundle/
+    project: ngi2016000
+    custom_config_base: /lupus/ngi/staging/latest/sw/sarek/configs/
+    command: /lupus/ngi/staging/latest/sw/sarek/workflow/main.nf
+    igenomes_ignore: " "
+    no_gatk_spark: " "
+    sequencing_center: "NGI-U"
+
+nextflow:
+    profile: uppmax
+    config:
+        - /lupus/ngi/staging/latest/conf/nextflow_irma_upps.config
+        - /lupus/ngi/staging/latest/conf/sarek_irma.config
+    resume: " "
+
+supported_genomes:
+    "GRCh37": "/sw/data/uppnex/piper_references/2016-04-07/gatk_bundle/2.8/b37//human_g1k_v37.fasta"
+    # GRMc38 is currently not used.  
+    #"GRCm38": "/sw/data/uppnex/reference/Mus_musculus/GRCm38/concat/Mus_musculus.GRCm38.69.dna.concat.fa"
+    "rn4": None
+    "saccer2": None
+    "dm3": None
+    "tair9": None
+    "xentro2": None
+    "ws210": None
+    "canfam3": None
+
+analysis:
+    best_practice_analysis:
+        whole_genome_reseq:
+            analysis_engine: ngi_pipeline.engines.piper_ngi
+        IGN:
+            analysis_engine: ngi_pipeline.engines.piper_ngi
+        qc:
+            analysis_engine: ngi_pipeline.engines.qc_ngi
+        RNA-seq:
+            analysis_engine: ngi_pipeline.engines.rna_ngi
+            ngi_nf_path: /sw//ngi-rnaseq/main.nf
+            sthlm_ngi_conf: /conf//ngi-rnaseq_sthlm.config
+            upps_ngi_conf: /conf//ngi-rnaseq_upps.config
+        wgs_germline:
+            analysis_engine: ngi_pipeline.engines.sarek
+        wgs_somatic:
+            analysis_engine: ngi_pipeline.engines.sarek
+        exome_germline:
+            analysis_engine: ngi_pipeline.engines.sarek
+        exome_somatic:
+            analysis_engine: ngi_pipeline.engines.sarek
+    top_dir: nobackup/NGI
+    sthlm_root: ngi2016000
+    upps_root: ngi2016000
+    base_root: /data
+
+qc:
+    load_modules:
+        - bioinfo-tools
+    fastqc:
+        load_modules:
+            - FastQC
+        threads: 16
+    fastq_screen:
+        config_path: "/conf//fastq_screen.irma.conf"
+        load_modules:
+            - bowtie2
+            - fastq_screen
+        subsample_reads: 200000
+        threads: 1
+
+gt_concordance:
+    XL_FILES_PATH: /genotype_data/incoming
+    XL_FILES_ARCHIVED:  /genotype_data/archive
+    GATK_PATH: /sw/apps/bioinfo/GATK/3.5.0//GenomeAnalysisTK.jar
+    GATK_REF_FILE: /sw/data/uppnex/piper_references/2016-04-07/gatk_bundle/2.8/b37//human_g1k_v37.fasta
+    GATK_VAR_FILE: /sw/data/uppnex/piper_references/2016-04-07/gatk_bundle/2.8/b37//dbsnp_138.b37.vcf
+    INTERVAL_FILE: /ngi_pipeline/static/snps.interval_list
+    SNPS_FILE: /ngi_pipeline/static/maf_snps.txt
+
+logging: 
+    log_file: "/data/ngi2016000/private/log/ngi_pipeline.log" 
+
+mail:
+    recipient: user@organization.org
+
+paths: # Hard code paths here if you are that kind of a person
+    binaries:
+        #bowtie2:
+        #fastqc:
+        #fastq_screen:
+    references:
