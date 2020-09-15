@@ -71,12 +71,12 @@ def launch_analysis(projects_to_analyze, restart_failed_jobs=False,
                 except Exception as e:
                     error_text = ('Cannot process project "{}" / sample "{}" / '
                                   'engine "{}" : {}'.format(project, sample,
-                                                            analysis_module.__name__,
+                                                            qc_analysis_module.__name__,
                                                             e))
                     LOG.error(error_text)
                     if not config.get("quiet"):
                         mail_analysis(project_name=project.name, sample_name=sample.name,
-                                      engine_name=analysis_module.__name__,
+                                      engine_name=qc_analysis_module.__name__,
                                       level="ERROR", info_text=e)
             # Launch actual best-practice analysis
         analysis.engine.analyze(analysis)
