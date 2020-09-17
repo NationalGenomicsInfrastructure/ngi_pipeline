@@ -41,13 +41,13 @@ class CharonSession(requests.Session):
             raise ValueError('Unable to load needed Charon variable: {}'.format(e))
 
         self.get = validate_response(functools.partial(self.get,
-                    headers=self._api_token_dict, timeout=3))
+                    headers=self._api_token_dict, timeout=10))
         self.post = validate_response(functools.partial(self.post,
-                    headers=self._api_token_dict, timeout=3))
+                    headers=self._api_token_dict, timeout=10))
         self.put = validate_response(functools.partial(self.put,
-                    headers=self._api_token_dict, timeout=3))
+                    headers=self._api_token_dict, timeout=10))
         self.delete = validate_response(functools.partial(self.delete,
-                    headers=self._api_token_dict, timeout=3))
+                    headers=self._api_token_dict, timeout=10))
 
         self._project_params = ('projectid', 'name', 'status', 'best_practice_analysis',
                                 'sequencing_facility', 'delivery_status', 'delivery_token', 'delivery_projects')
