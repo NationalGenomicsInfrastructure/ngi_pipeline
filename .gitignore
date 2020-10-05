@@ -39,3 +39,6 @@ nosetests.xml
 
 # Mac OSX stuff...
 .DS*
+
+# Editor files
+.vscode

@@ -23,7 +23,6 @@ from ngi_pipeline.database.classes import CharonError
 from ngi_pipeline.database.filesystem import create_charon_entries_from_project
 from ngi_pipeline.engines import qc_ngi
 from ngi_pipeline.log.loggers import minimal_logger
-from ngi_pipeline.server import main as server_main
 from ngi_pipeline.utils.charon import find_projects_from_samples, \
                                       reset_charon_records_by_object, \
                                       reset_charon_records_by_name
@@ -93,16 +92,12 @@ if __name__ == "__main__":
             help=("Send mails (INFO/WARN/ERROR); default False."))
     parser.add_argument("-w", "--version", action='version', 
             version='NGI Pipeline version {version}'.format(version=__version__), help="Displays current version number")
-    # Add subparser for the server
-    parser_server = subparsers.add_parser('server', help="Start ngi_pipeline server")
-    parser_server.add_argument('-p', '--port', type=int,
-            help="Port on which to listen for incoming connections")
-
 
     # Add subparser for organization
     parser_organize = subparsers.add_parser('organize',
             help="Organize one or more demultiplexed flowcells into project/sample/libprep/seqrun format.")
     subparsers_organize = parser_organize.add_subparsers(help='Choose unit to analyze')
+
     # Add sub-subparser for flowcell organization
     organize_flowcell = subparsers_organize.add_parser('flowcell',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -520,8 +515,3 @@ if __name__ == "__main__":
                                             restart_running_jobs=args.restart_running_jobs,
                                             keep_existing_data=args.keep_existing_data,
                                             level="genotype")
-
-    ## Server
-    elif 'port' in args:
-        LOG.info('Starting ngi_pipeline server at port {}'.format(args.port))
-        server_main.start(args.port)
