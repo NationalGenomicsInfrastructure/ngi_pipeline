@@ -23,11 +23,9 @@ from ngi_pipeline.database.classes import CharonError
 from ngi_pipeline.database.filesystem import create_charon_entries_from_project
 from ngi_pipeline.engines import qc_ngi
 from ngi_pipeline.log.loggers import minimal_logger
-from ngi_pipeline.utils.charon import find_projects_from_samples, \
-                                      reset_charon_records_by_object, \
+from ngi_pipeline.utils.charon import reset_charon_records_by_object, \
                                       reset_charon_records_by_name
 from ngi_pipeline.utils.filesystem import locate_project, recreate_project_from_filesystem
-from ngi_pipeline.utils.parsers import parse_samples_from_vcf
 
 LOG = minimal_logger(os.path.basename(__file__))
 inflector = inflect.engine()
@@ -210,26 +208,6 @@ if __name__ == "__main__":
     qc_project.add_argument("qc_project_dirs", nargs="+",
             help=("The path to one or more pre-parsed project directories to "
                   "run through QC analysis."))
-
-
-    # Add subparser for genotyping
-    parser_genotype = subparsers.add_parser('genotype', help="Launch genotype concordance analysis.")
-    subparsers_genotype = parser_genotype.add_subparsers(parser_class=ArgumentParserWithTheFlagsThatIWant,
-            help="Choose unit to analyze.")
-    # Add sub-subparser for project genotyping
-    genotype_project = subparsers_genotype.add_parser('project',
-            help="Start genotype analysis for all samples in a project")
-    genotype_project.add_argument("genotype_project_dirs", nargs="*",
-            help=("The path to one or more pre-parsed project directories to "
-                  "run through genotype concordance analysis. If not specified, "
-                  "all samples in vcf file are genotyped if possible. (Optional)"))
-    genotype_project.add_argument("-g", "--genotype-file", action="store", required=True,
-            help="The path to the genotype VCF file.")
-    genotype_project.add_argument("-k", "--keep-existing-data", action="store_true",
-            help="Keep/re-use existing analysis data when launching new analyses.")
-    # Add sub-subparser for sample genotyping
-    #genotype_sample = subparsers_genotype.add_parser('sample',
-    #        help="Start genotype analysis for one specific sample in a project.")
 
 
     args = parser.parse_args()
@@ -477,41 +455,3 @@ if __name__ == "__main__":
                 LOG.error(e.message)
                 print(e, file=sys.stderr)
         LOG.info("Done with organization.")
-
-    elif 'genotype_project_dirs' in args:
-        from ngi_pipeline.engines import piper_ngi
-        genotype_file_path = args.genotype_file
-        project_obj_list = []
-        if not args.genotype_project_dirs:
-            LOG.info('No projects specified; running genotype analysis for all '
-                     'samples present in VCF file.')
-            # User passed only the genotype file; try to determine samples/projects
-            # from vcf file
-            projects_samples_dict = \
-                    find_projects_from_samples(parse_samples_from_vcf(genotype_file_path))
-            for project_id, samples in projects_samples_dict.iteritems():
-                try:
-                    path_to_project = locate_project(project_id)
-                except ValueError:
-                    # Project has not yet been organized from flowcell level
-                    LOG.warning('Project "{}" has not yet been organized from '
-                             'flowcell to project level; skipping.'.format(project_id))
-                    continue
-                project = recreate_project_from_filesystem(project_dir=path_to_project,
-                                                           restrict_to_samples=samples)
-                project_obj_list.append(project)
-        else:
-            for genotype_project_dir in args.genotype_project_dirs:
-                LOG.info("Starting genotype analysis of project {} with genotype "
-                         "file {}".format(genotype_project_dir, genotype_file_path))
-                project = recreate_project_from_filesystem(project_dir=genotype_project_dir,
-                                                           restrict_to_samples=args.restrict_to_samples)
-                project_obj_list.append(project)
-        for project in project_obj_list:
-            for sample in project:
-                piper_ngi.launchers.analyze(project, sample,
-                                            genotype_file=genotype_file_path,
-                                            restart_finished_jobs=args.restart_finished_jobs,
-                                            restart_running_jobs=args.restart_running_jobs,
-                                            keep_existing_data=args.keep_existing_data,
-                                            level="genotype")
