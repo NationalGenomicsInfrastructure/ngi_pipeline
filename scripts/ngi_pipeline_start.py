@@ -124,21 +124,6 @@ if __name__ == "__main__":
     subparsers_analyze = parser_analyze.add_subparsers(parser_class=ArgumentParserWithTheFlagsThatIWant,
             help='Choose unit to analyze')
 
-    # Add sub-subparser for flowcell analysis
-    analyze_flowcell = subparsers_analyze.add_parser('flowcell',
-            help='Start analysis of raw flowcells')
-    analyze_flowcell.add_argument("-k", "--keep-existing-data", action="store_true",
-            help="Keep/re-use existing analysis data when launching new analyses.")
-    analyze_flowcell.add_argument("--no-qc", action="store_true",
-            help="Skip qc analysis.")
-    analyze_flowcell.add_argument("--generate_bqsr_bam", action="store_true", dest="generate_bqsr_bam",
-            default=False, help="Generate the recalibrated BAM file")
-    analyze_flowcell.add_argument("analyze_fc_dirs", nargs="+",
-            help=("The path to one or more demultiplexed Illumina flowcell "
-                  "directories to process and analyze."))
-    analyze_flowcell.add_argument("-p", "--project", dest="restrict_to_projects", action="append",
-            help=("Restrict analysis to these projects. "
-                  "Use flag multiple times for multiple projects."))
     # Add sub-subparser for project analysis
     analyze_project = subparsers_analyze.add_parser('project',
             help='Start the analysis of a pre-parsed project.')
@@ -154,29 +139,7 @@ if __name__ == "__main__":
     # Add subparser for qc
     parser_qc = subparsers.add_parser('qc', help='Launch QC analysis.')
     subparsers_qc = parser_qc.add_subparsers(help='Choose unit to analyze')
-    # Add sub-subparser for flowcell qc
-    qc_flowcell = subparsers_qc.add_parser('flowcell',
-            help='Start QC analysis of raw flowcells.')
-    qc_flowcell.add_argument("-r", "--rerun", action="store_true",
-            help='Force the rerun of the qc analysis if output files already exist.')
-    qc_flowcell.add_argument("-l", "--fallback-libprep", default=None,
-            help=("If no libprep is supplied in the SampleSheet.csv or in Charon, "
-                  "use this value when creating records in Charon. (Optional)"))
-    qc_flowcell.add_argument("-w", "--sequencing-facility", default="NGI-S", choices=('NGI-S', 'NGI-U'),
-            help="The facility where sequencing was performed.")
-    qc_flowcell.add_argument("-b", "--best_practice_analysis", default="whole_genome_reseq",
-            help="The best practice analysis to run for this project or projects.")
-    qc_flowcell.add_argument("-f", "--force", dest="force_update", action="store_true",
-            help="Force updating Charon projects. Danger danger danger. This will overwrite things.")
-    qc_flowcell.add_argument("-d", "--delete", dest="delete_existing", action="store_true",
-            help="Delete existing projects in Charon. Similarly dangerous.")
-    qc_flowcell.add_argument("-s", "--sample", dest="restrict_to_samples", action="append",
-            help=("Restrict analysis to these samples. Use flag multiple times for multiple samples."))
-    qc_flowcell.add_argument("-p", "--project", dest="restrict_to_projects", action="append",
-            help="Restrict processing to these projects. Use flag multiple times for multiple projects.")
-    qc_flowcell.add_argument("qc_flowcell_dirs", nargs="+",
-            help=("The path to one or more demultiplexed Illumina flowcell "
-                  "directories to process and run through QC analysis."))
+
     # Add sub-subparser for project qc
     qc_project = subparsers_qc.add_parser('project',
             help='Start QC analysis of a pre-parsed project directory.')
@@ -228,23 +191,6 @@ if __name__ == "__main__":
 
     # Finally execute corresponding functions
 
-    ## Analyze Flowcell
-    if 'analyze_fc_dirs' in args:
-        LOG.info('Starting flowcell analysis of flowcell {} '
-                 '{}'.format(inflector.plural("directory", len(args.analyze_fc_dirs)),
-                             ", ".join(args.analyze_fc_dirs)))
-        flowcell.process_demultiplexed_flowcells(args.analyze_fc_dirs,
-                                                 args.restrict_to_projects,
-                                                 args.restrict_to_samples,
-                                                 args.restart_failed_jobs,
-                                                 args.restart_finished_jobs,
-                                                 args.restart_running_jobs,
-                                                 keep_existing_data=args.keep_existing_data,
-                                                 no_qc=args.no_qc,
-                                                 quiet=args.quiet,
-                                                 manual=True,
-                                                 generate_bqsr_bam=args.generate_bqsr_bam)
-
     ## Analyze Project
     elif 'analyze_project_dirs' in args:
         for analyze_project_dir in args.analyze_project_dirs:
@@ -265,32 +211,6 @@ if __name__ == "__main__":
                                       quiet=args.quiet,
                                       manual=True,
                                       generate_bqsr_bam=args.generate_bqsr_bam)
-
-    ## QC Flowcell
-    elif 'qc_flowcell_dirs' in args:
-        qc_flowcell_dirs_list = list(set(args.qc_flowcell_dirs))
-        LOG.info("Organizing flowcell {} {}".format(inflector.plural("directory",
-                                                                     len(qc_flowcell_dirs_list)),
-                                                    ", ".join(qc_flowcell_dirs_list)))
-        projects_to_analyze = \
-                organize_projects_from_flowcell(demux_fcid_dirs=qc_flowcell_dirs_list,
-                                                restrict_to_projects=args.restrict_to_projects,
-                                                restrict_to_samples=args.restrict_to_samples,
-                                                fallback_libprep=args.fallback_libprep,
-                                                quiet=args.quiet)
-        for project in projects_to_analyze:
-            try:
-                create_charon_entries_from_project(project=project,
-                                                   best_practice_analysis=args.best_practice_analysis,
-                                                   sequencing_facility=args.sequencing_facility,
-                                                   force_overwrite=args.force_update,
-                                                   delete_existing=args.delete_existing)
-            except Exception as e:
-                print(e, file=sys.stderr)
-        LOG.info("Done with organization.")
-        for project in projects_to_analyze:
-            for sample in project:
-                qc_ngi.launchers.analyze(project, sample, quiet=args.quiet)
 
     ## QC Project
     elif 'qc_project_dirs' in args:
