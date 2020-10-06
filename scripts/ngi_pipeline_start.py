@@ -23,8 +23,6 @@ from ngi_pipeline.database.classes import CharonError
 from ngi_pipeline.database.filesystem import create_charon_entries_from_project
 from ngi_pipeline.engines import qc_ngi
 from ngi_pipeline.log.loggers import minimal_logger
-from ngi_pipeline.utils.charon import reset_charon_records_by_object, \
-                                      reset_charon_records_by_name
 from ngi_pipeline.utils.filesystem import locate_project, recreate_project_from_filesystem
 
 LOG = minimal_logger(os.path.basename(__file__))
@@ -120,25 +118,6 @@ if __name__ == "__main__":
             help="Restrict processing to these samples. Use flag multiple times for multiple samples.")
     organize_flowcell.add_argument("-p", "--project", dest="restrict_to_projects", action="append",
             help="Restrict processing to these projects. Use flag multiple times for multiple projects.")
-
-    # Add subparser for deletion
-    parser_delete = subparsers.add_parser('delete', help="Delete data systematically.")
-    subparsers_delete = parser_delete.add_subparsers(help="Choose unit to delete.")
-    delete_analysis = subparsers_delete.add_parser('analysis', help="Delete analysis files.")
-    delete_analysis.add_argument("delete_proj_analysis", nargs="+",
-            help=("The name of the project whose analysis you would delete.\n"
-                  "NOTE: if no analysis engine is specified, entire project "
-                  "analysis directory will be deleted."))
-    delete_analysis.add_argument("-e", "--engine",
-            help=("The engine whose  analysis data you would delete. Only required"
-                  "for full project analysis deletion (not with specific samples."))
-    delete_analysis.add_argument("-s", "--sample", dest="restrict_to_samples", action="append",
-            help=("Restrict deletion to these samples. Use flag multiple times "
-                  "for multiple samples.\nNOTE: requires engine has implemented "
-                  "individual sample removal functionality."))
-    delete_analysis.add_argument("-c", "--reset-charon", action="store_true",
-            help=("Reset status values in Charon when deleting analyses for "
-                  "a project/sample."))
 
     # Add subparser for analysis
     parser_analyze = subparsers.add_parser('analyze', help="Launch analysis.")
@@ -286,114 +265,6 @@ if __name__ == "__main__":
                                       quiet=args.quiet,
                                       manual=True,
                                       generate_bqsr_bam=args.generate_bqsr_bam)
-
-    elif 'delete_proj_analysis' in args:
-        from ngi_pipeline.conductor.classes import get_engine_for_bp
-        delete_proj_analysis_list = list(set(args.delete_proj_analysis))
-        for delete_proj_analysis in delete_proj_analysis_list:
-            if args.restrict_to_samples:
-                try:
-                    project_dir = locate_project(delete_proj_analysis)
-                except ValueError as e:
-                    LOG.error(e)
-                    continue
-                # Remove specific samples from the project if this code is implemented
-                project_obj = \
-                        recreate_project_from_filesystem(project_dir=project_dir,
-                                                         restrict_to_samples=args.restrict_to_samples)
-                if not project_obj.samples:
-                    LOG.error("No samples found for project {}. Skipping.".format(project_obj))
-                    continue
-                try:
-                    analysis_module = get_engine_for_bp(project_obj)
-                except Exception as e:
-                    if args.engine:
-                        # Try to import using the user-supplied engine
-                        analysis_engine = args.engine
-                        if not analysis_engine.startswith("ngi_pipeline.engines."):
-                            analysis_engine = "ngi_pipeline.engines." + analysis_engine
-                        try:
-                            analysis_module = importlib.import_module(analysis_engine)
-                        except ImportError:
-                            LOG.error('Analysis engine for project "{}" could not '
-                                      'be determined from Charon and user-supplied '
-                                      'engine "{}" was not importable.'.format(project_obj,
-                                                                               analysis_engine))
-                            continue
-                    else:
-                        LOG.error('Analysis engine for project "{}" could not '
-                                  'be determined from Charon and no value was '
-                                  'supplied. Skipping. ({})'.format(project_obj, e))
-                        continue
-                if args.engine and args.engine not in analysis_module.__name__:
-                    LOG.error('Engine "{}" was specified for project "{}" but Charon '
-                              'indicates engine is "{}". This parameter is not '
-                              'required for individual sample deletion as it is '
-                              'loaded from Charon. Skipping.'.format(args.engine,
-                                                                     project_obj,
-                                                                     analysis_module.__name__))
-                    continue
-                if validate_dangerous_user_thing( \
-                        action=('delete the following sample analyses for engine "{}": '
-                                 '{}'.format(analysis_module.__name__,
-                                             ", ".join(
-                                                 [s.name for s in project_obj.samples.values()])))):
-                    try:
-                        analysis_module.utils.remove_previous_sample_analyses(project_obj)
-                    except AttributeError:
-                        LOG.error('Analysis module "{}" has not implemented '
-                                  'the function "utils.remove_previous_sample_analyses, '
-                                  'so individual sample analyses cannot be removed. '
-                                  'Skipping project analysis deletion for project '
-                                  '"{}"'.format(analysis_module.__name__, project_obj))
-                        continue
-                    try:
-                        reset_charon_records_by_object(project_obj)
-                    except CharonError as e:
-                        LOG.error("Error when resetting Charon records for project "
-                                  "{}: {}".format(project_obj, e))
-            else:
-                try:
-                    delete_tree_path = locate_project(delete_proj_analysis, subdir="ANALYSIS")
-                except ValueError as e:
-                    LOG.error(e)
-                    continue
-                delete_symlink_path = None
-                for item in glob.glob(os.path.join(os.path.split(delete_tree_path)[0], "*")):
-                    if os.path.islink(item):
-                        if os.path.realpath(item) == delete_tree_path:
-                            delete_symlink_path = item
-                if args.engine:
-                    delete_tree_path = os.path.join(delete_tree_path, args.engine)
-                    if not os.path.exists(delete_tree_path):
-                        LOG.error('User-specified engine analysis path does not '
-                                  'exist; skipping: {}'.format(delete_tree_path))
-                        continue
-                    if delete_symlink_path:
-                        delete_symlink_path = os.path.join(delete_symlink_path, args.engine)
-                if validate_dangerous_user_thing(action=('delete ALL ANALYSIS files '
-                                                         'under {} and RESET ALL '
-                                                         'CHARON RECORDS for this '
-                                                         'project'.format(delete_tree_path))):
-                    try:
-                        LOG.info("Deleting {}...".format(delete_tree_path))
-                        shutil.rmtree(delete_tree_path)
-                        LOG.info("Deleted {}".format(delete_tree_path))
-                    except OSError as e:
-                        LOG.error('Error when deleting {}: {}'.format(delete_tree_path, e))
-                    if delete_symlink_path:
-                        try:
-                            LOG.info("Unlinking symlink {}...".format(delete_symlink_path))
-                            os.unlink(delete_symlink_path)
-                            LOG.info("Removed symlink {}".format(delete_symlink_path))
-                        except OSError as e:
-                            LOG.error("Error when unlinking {}: {}".format(delete_symlink_path, e))
-                    try:
-                        reset_charon_records_by_name(delete_proj_analysis)
-                    except CharonError as e:
-                        LOG.error("Error when resetting Charon records for project "
-                                  "{}: {}".format(delete_proj_analysis, e))
-
 
     ## QC Flowcell
     elif 'qc_flowcell_dirs' in args:
