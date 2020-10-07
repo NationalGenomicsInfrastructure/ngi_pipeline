@@ -10,10 +10,8 @@ import re
 import sys
 
 from ngi_pipeline.conductor.classes import NGIProject
-from ngi_pipeline.conductor.launchers import launch_analysis
 from ngi_pipeline.database.classes import CharonSession, CharonError
 from ngi_pipeline.database.communicate import get_project_id_from_name
-from ngi_pipeline.database.filesystem import create_charon_entries_from_project
 from ngi_pipeline.log.loggers import minimal_logger
 from ngi_pipeline.utils.classes import with_ngi_config
 from ngi_pipeline.utils.communication import mail_analysis

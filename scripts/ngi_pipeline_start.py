@@ -109,11 +109,6 @@ if __name__ == "__main__":
             help="The best practice analysis to run for this project or projects.")
     organize_flowcell.add_argument("-f", "--force", dest="force_update", action="store_true",
             help="Force updating Charon projects. Danger danger danger. This will overwrite things.")
-    organize_flowcell.add_argument("-d", "--delete", dest="delete_existing", action="store_true",
-            help="Delete existing projects in Charon. Similarly dangerous.")
-    organize_flowcell.add_argument("--force-create-project", action="store_true",
-            help="TESTING ONLY: Create a project if it does not exist in Charon "
-                 "using the project name as the project id.")
     organize_flowcell.add_argument("-s", "--sample", dest="restrict_to_samples", action="append",
             help="Restrict processing to these samples. Use flag multiple times for multiple samples.")
     organize_flowcell.add_argument("-p", "--project", dest="restrict_to_projects", action="append",
@@ -127,8 +122,6 @@ if __name__ == "__main__":
     # Add sub-subparser for project analysis
     analyze_project = subparsers_analyze.add_parser('project',
             help='Start the analysis of a pre-parsed project.')
-    analyze_project.add_argument("-k", "--keep-existing-data", action="store_true",
-            help="Keep/re-use existing analysis data when launching new analyses.")
     analyze_project.add_argument("--no-qc", action="store_true",
             help="Skip qc analysis.")
     analyze_project.add_argument("--generate_bqsr_bam", action="store_true", dest="generate_bqsr_bam",
@@ -157,9 +150,7 @@ if __name__ == "__main__":
     # These options are available only if the script has been called with the 'analyze' option
     restart_all_jobs = args.__dict__.get('restart_all_jobs')
     if restart_all_jobs:
-        if not args.__dict__.get("keep_existing_data"):
-            # Validate if not keep_existing_data
-            restart_all_jobs = validate_dangerous_user_thing(action=("restart all FAILED, RUNNING, "
+        restart_all_jobs = validate_dangerous_user_thing(action=("restart all FAILED, RUNNING, "
                                                                      "and FINISHED jobs, deleting "
                                                                      "previous analyses"))
         if restart_all_jobs: # 'if' b.c. there's no 'if STILL' operator (kludge kludge kludge)
@@ -167,27 +158,22 @@ if __name__ == "__main__":
             args.restart_finished_jobs = True
             args.restart_running_jobs = True
     else:
-        if not args.__dict__.get("keep_existing_data"):
-            if args.__dict__.get("restart_failed_jobs"):
-                args.restart_failed_jobs = \
-                    validate_dangerous_user_thing(action=("restart FAILED jobs, deleting "
-                                                          "previous analysies files"))
-            if args.__dict__.get("restart_finished_jobs"):
-                args.restart_finished_jobs = \
-                    validate_dangerous_user_thing(action=("restart FINISHED jobs, deleting "
-                                                          "previous analysis files"))
-            if args.__dict__.get("restart_running_jobs"):
-                args.restart_finished_jobs = \
-                    validate_dangerous_user_thing(action=("restart RUNNING jobs, deleting "
-                                                          "previous analysis files"))
+        if args.__dict__.get("restart_failed_jobs"):
+            args.restart_failed_jobs = \
+                validate_dangerous_user_thing(action=("restart FAILED jobs, deleting "
+                                                        "previous analysies files"))
+        if args.__dict__.get("restart_finished_jobs"):
+            args.restart_finished_jobs = \
+                validate_dangerous_user_thing(action=("restart FINISHED jobs, deleting "
+                                                        "previous analysis files"))
+        if args.__dict__.get("restart_running_jobs"):
+            args.restart_finished_jobs = \
+                validate_dangerous_user_thing(action=("restart RUNNING jobs, deleting "
+                                                        "previous analysis files"))
     # Charon-specific arguments ('organize', 'analyze', 'qc')
     if args.__dict__.get("force_update"):
         args.force_update = \
                 validate_dangerous_user_thing("overwrite existing data in Charon")
-    if args.__dict__.get("delete_existing"):
-        args.delete_existing = \
-                validate_dangerous_user_thing("delete existing data in Charon")
-
 
     # Finally execute corresponding functions
 
@@ -206,7 +192,6 @@ if __name__ == "__main__":
                                       restart_failed_jobs=args.restart_failed_jobs,
                                       restart_finished_jobs=args.restart_finished_jobs,
                                       restart_running_jobs=args.restart_running_jobs,
-                                      keep_existing_data=args.keep_existing_data,
                                       no_qc=args.no_qc,
                                       quiet=args.quiet,
                                       manual=True,
@@ -240,8 +225,7 @@ if __name__ == "__main__":
                 create_charon_entries_from_project(project=project,
                                                    best_practice_analysis=args.best_practice_analysis,
                                                    sequencing_facility=args.sequencing_facility,
-                                                   force_overwrite=args.force_update,
-                                                   delete_existing=args.delete_existing)
+                                                   force_overwrite=args.force_update)
             except Exception as e:
                 LOG.error(e.message)
                 print(e, file=sys.stderr)

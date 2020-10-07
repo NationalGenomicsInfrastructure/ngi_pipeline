@@ -128,13 +128,11 @@ def analyze(analysis_object, level='sample', config=None, config_file_path=None)
                                                                 project_id=analysis_object.project.project_id,
                                                                 sample_id=sample.name)
                     if level == "sample":
-                        if not analysis_object.keep_existing_data:
-                            remove_previous_sample_analyses(analysis_object.project, sample)
-                            default_files_to_copy=None
+                        remove_previous_sample_analyses(analysis_object.project, sample)
+                        default_files_to_copy=None
                     elif level == "genotype":
-                        if not analysis_object.keep_existing_data:
-                            remove_previous_genotype_analyses(analysis_object.project)
-                            default_files_to_copy=None
+                        remove_previous_genotype_analyses(analysis_object.project)
+                        default_files_to_copy=None
 
                     # Update the project to keep only valid fastq files for setup.xml creation
                     if level == "genotype":
