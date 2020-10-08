@@ -10,7 +10,7 @@ class NGIAnalysis(object):
                     restart_finished_jobs=False, restart_running_jobs=False,
                     no_qc=False, exec_mode="sbatch",
                     quiet=False, manual=False, config=None, config_file_path=None,
-                    generate_bqsr_bam=False, log=None, sample=None):
+                    log=None, sample=None):
         self.project=project
         self.sample=sample
         self.restart_failed_jobs=restart_failed_jobs
@@ -22,7 +22,6 @@ class NGIAnalysis(object):
         self.manual=manual
         self.config=config
         self.config_file_path=config_file_path
-        self.generate_bqsr_bam=generate_bqsr_bam
         self.log=log
 
         if not log:

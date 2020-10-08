@@ -17,8 +17,8 @@ LOG = minimal_logger(__name__)
 def launch_analysis(projects_to_analyze, restart_failed_jobs=False,
                     restart_finished_jobs=False, restart_running_jobs=False,
                     no_qc=False, exec_mode="sbatch",
-                    quiet=False, manual=False, config=None, config_file_path=None,
-                    generate_bqsr_bam=False):
+                    quiet=False, manual=False,
+                    config=None, config_file_path=None):
     """Launch the appropriate analysis for each fastq file in the project.
 
     :param list projects_to_analyze: The list of projects (Project objects) to analyze
@@ -34,7 +34,7 @@ def launch_analysis(projects_to_analyze, restart_failed_jobs=False,
                         no_qc=no_qc,
                         exec_mode=exec_mode, quiet=quiet, manual=manual,
                         config=config, config_file_path=config_file_path,
-                        generate_bqsr_bam=generate_bqsr_bam, log=LOG)
+                        log=LOG)
         except (RuntimeError, CharonError) as e: # BPA missing from Charon?
             LOG.error('Skipping project "{}" because of error: {}'.format(project, e))
             continue

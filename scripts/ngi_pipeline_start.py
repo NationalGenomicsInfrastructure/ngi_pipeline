@@ -124,8 +124,6 @@ if __name__ == "__main__":
             help='Start the analysis of a pre-parsed project.')
     analyze_project.add_argument("--no-qc", action="store_true",
             help="Skip qc analysis.")
-    analyze_project.add_argument("--generate_bqsr_bam", action="store_true", dest="generate_bqsr_bam",
-            default=False, help="Generate the recalibrated BAM file")
     analyze_project.add_argument('analyze_project_dirs', nargs='+',
             help='The path to the project folder to be analyzed.')
 
@@ -194,8 +192,7 @@ if __name__ == "__main__":
                                       restart_running_jobs=args.restart_running_jobs,
                                       no_qc=args.no_qc,
                                       quiet=args.quiet,
-                                      manual=True,
-                                      generate_bqsr_bam=args.generate_bqsr_bam)
+                                      manual=True)
 
     ## QC Project
     elif 'qc_project_dirs' in args:

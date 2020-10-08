@@ -157,8 +157,7 @@ def analyze(analysis_object, level='sample', config=None, config_file_path=None)
                                               setup_xml_path=setup_xml_path,
                                               exit_code_path=exit_code_path,
                                               config=analysis_object.config,
-                                              exec_mode=analysis_object.exec_mode,
-                                              generate_bqsr_bam=analysis_object.generate_bqsr_bam)
+                                              exec_mode=analysis_object.exec_mode)
                     if analysis_object.exec_mode == "sbatch":
                         process_id = None
                         slurm_job_id = sbatch_piper_sample([setup_xml_cl, piper_cl],
