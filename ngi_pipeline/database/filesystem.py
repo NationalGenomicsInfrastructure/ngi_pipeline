@@ -50,14 +50,6 @@ def create_charon_entries_from_project(project, best_practice_analysis="whole_ge
         else:
             raise
     for sample in project:
-        # if delete_existing:
-        #     LOG.warning('Deleting existing sample "{}"'.format(sample))
-        #     try:
-        #         charon_session.sample_delete(projectid=project.project_id,
-        #                                      sampleid=sample.name)
-        #     except CharonError as e:
-        #         update_failed=True
-        #         LOG.error('Could not delete sample "{}": {}'.format(sample, e))
         try:
             analysis_status = "TO_ANALYZE"
             sample_data_status_value = "STALE"
@@ -88,14 +80,6 @@ def create_charon_entries_from_project(project, best_practice_analysis="whole_ge
                 LOG.error(e)
                 continue
         for libprep in sample:
-            # if delete_existing:
-            #     LOG.warning('Deleting existing libprep "{}"'.format(libprep))
-            #     try:
-            #         charon_session.libprep_delete(projectid=project.project_id,
-            #                                       sampleid=sample.name,
-            #                                       libprepid=libprep.name)
-            #     except CharonError as e:
-            #         LOG.warning('Could not delete libprep "{}": {}'.format(libprep, e))
             try:
                 qc = "PASSED"
                 LOG.info('Creating libprep "{}" with qc status "{}"'.format(libprep, qc))
@@ -126,16 +110,6 @@ def create_charon_entries_from_project(project, best_practice_analysis="whole_ge
                     LOG.error(e)
                     continue
             for seqrun in libprep:
-                # if delete_existing:
-                #     LOG.warning('Deleting existing seqrun "{}"'.format(seqrun))
-                #     try:
-                #         charon_session.seqrun_delete(projectid=project.project_id,
-                #                                      sampleid=sample.name,
-                #                                      libprepid=libprep.name,
-                #                                      seqrunid=seqrun.name)
-                #     except CharonError as e:
-                #         update_failed=True
-                #         LOG.error('Could not delete seqrun "{}": {}'.format(seqrun, e))
                 try:
                     alignment_status="NOT_RUNNING"
                     LOG.info('Creating seqrun "{}" with alignment_status "{}"'.format(seqrun, alignment_status))

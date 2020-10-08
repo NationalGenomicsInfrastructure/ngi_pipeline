@@ -7,19 +7,14 @@ cluster (UPPMAX for NGI), or trigger analysis itself.
 from __future__ import print_function
 
 import argparse
-import glob
-import importlib
 import inflect
 import os
-import shutil
 import sys
 
 from ngi_pipeline import __version__
 from ngi_pipeline.conductor import flowcell
 from ngi_pipeline.conductor import launchers
-from ngi_pipeline.conductor.flowcell import organize_projects_from_flowcell, \
-                                            setup_analysis_directory_structure
-from ngi_pipeline.database.classes import CharonError
+from ngi_pipeline.conductor.flowcell import organize_projects_from_flowcell
 from ngi_pipeline.database.filesystem import create_charon_entries_from_project
 from ngi_pipeline.engines import qc_ngi
 from ngi_pipeline.log.loggers import minimal_logger
