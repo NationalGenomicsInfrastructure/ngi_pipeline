@@ -171,7 +171,7 @@ if __name__ == "__main__":
     # Finally execute corresponding functions
 
     ## Analyze Project
-    elif 'analyze_project_dirs' in args:
+    if 'analyze_project_dirs' in args:
         for analyze_project_dir in args.analyze_project_dirs:
             try:
                 project_dir = locate_project(analyze_project_dir)
