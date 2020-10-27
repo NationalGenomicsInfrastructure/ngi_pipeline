@@ -93,23 +93,3 @@ class TestCommandCreation(unittest.TestCase):
         cl = build_piper_cl(**kwargs).split(" ")
         _validate_cl(cl)
         assert '--keep_pre_bqsr_bam' in cl
-
-        cl = build_piper_cl(generate_bqsr_bam=True, **kwargs).split(" ")
-        _validate_cl(cl)
-        assert '--keep_pre_bqsr_bam' not in cl
-
-
-    # this is hardly possible to test, let's just skip it
-    #def test_analyze(self):
-        # the NGIAnalysis constructor will do a lookup in charon so mock it
-    #    with mock.patch('ngi_pipeline.conductor.classes.CharonSession',
-    #                    spec=False,
-    #                    return_value=self.charon_mock) as dbmock:
-            # global variable LOG referenced in a submethod, I won't fix that so let's just monkey it here
-    #        conductor.classes.LOG = mock.Mock()
-    #        analysis_obj = NGIAnalysis(self.project_obj, sample=self.sample_obj)
-    #    with mock.patch('ngi_pipeline.database.classes.CharonSession',
-    #                    spec=False,
-    #                    return_value=self.charon_mock) as dbmock:
-    #        analyze(analysis_obj)
-    #    return True

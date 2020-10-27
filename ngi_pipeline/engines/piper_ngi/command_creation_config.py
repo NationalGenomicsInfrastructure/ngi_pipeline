@@ -11,7 +11,7 @@ LOG = minimal_logger(__name__)
 
 ## TODO change this to use local_scratch_mode boolean instead of exec_mode
 def build_piper_cl(project, workflow_name, setup_xml_path, exit_code_path,
-                   config, genotype_file=None, exec_mode="local", generate_bqsr_bam=False):
+                   config, genotype_file=None, exec_mode="local"):
     """Determine which workflow to run for a project and build the appropriate command line.
     :param NGIProject project: The project object to analyze.
     :param str workflow_name: The name of the workflow to execute (e.g. "dna_alignonly")
@@ -54,8 +54,7 @@ def build_piper_cl(project, workflow_name, setup_xml_path, exit_code_path,
                                           setup_xml_path=setup_xml_path,
                                           genotype_file=genotype_file,
                                           output_dir=output_dir,
-                                          exec_mode=exec_mode,
-                                          generate_bqsr_bam=generate_bqsr_bam)
+                                          exec_mode=exec_mode)
     # Blank out the file if it already exists
     safe_makedir(os.path.dirname(exit_code_path))
     open(exit_code_path, 'w').close()

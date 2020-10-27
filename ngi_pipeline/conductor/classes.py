@@ -8,22 +8,20 @@ from ngi_pipeline.utils.charon import recurse_status_for_sample
 class NGIAnalysis(object):
     def __init__(self, project, restart_failed_jobs=None,
                     restart_finished_jobs=False, restart_running_jobs=False,
-                    keep_existing_data=False, no_qc=False, exec_mode="sbatch",
+                    no_qc=False, exec_mode="sbatch",
                     quiet=False, manual=False, config=None, config_file_path=None,
-                    generate_bqsr_bam=False, log=None, sample=None):
+                    log=None, sample=None):
         self.project=project
         self.sample=sample
         self.restart_failed_jobs=restart_failed_jobs
         self.restart_finished_jobs=restart_finished_jobs
         self.restart_running_jobs=restart_running_jobs
-        self.keep_existing_data=keep_existing_data 
         self.no_qc=no_qc 
         self.exec_mode=exec_mode
         self.quiet=quiet
         self.manual=manual
         self.config=config
         self.config_file_path=config_file_path
-        self.generate_bqsr_bam=generate_bqsr_bam
         self.log=log
 
         if not log:

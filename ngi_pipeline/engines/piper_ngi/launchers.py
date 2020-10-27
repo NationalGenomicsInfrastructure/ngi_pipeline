@@ -128,13 +128,11 @@ def analyze(analysis_object, level='sample', config=None, config_file_path=None)
                                                                 project_id=analysis_object.project.project_id,
                                                                 sample_id=sample.name)
                     if level == "sample":
-                        if not analysis_object.keep_existing_data:
-                            remove_previous_sample_analyses(analysis_object.project, sample)
-                            default_files_to_copy=None
+                        remove_previous_sample_analyses(analysis_object.project, sample)
+                        default_files_to_copy=None
                     elif level == "genotype":
-                        if not analysis_object.keep_existing_data:
-                            remove_previous_genotype_analyses(analysis_object.project)
-                            default_files_to_copy=None
+                        remove_previous_genotype_analyses(analysis_object.project)
+                        default_files_to_copy=None
 
                     # Update the project to keep only valid fastq files for setup.xml creation
                     if level == "genotype":
@@ -159,8 +157,7 @@ def analyze(analysis_object, level='sample', config=None, config_file_path=None)
                                               setup_xml_path=setup_xml_path,
                                               exit_code_path=exit_code_path,
                                               config=analysis_object.config,
-                                              exec_mode=analysis_object.exec_mode,
-                                              generate_bqsr_bam=analysis_object.generate_bqsr_bam)
+                                              exec_mode=analysis_object.exec_mode)
                     if analysis_object.exec_mode == "sbatch":
                         process_id = None
                         slurm_job_id = sbatch_piper_sample([setup_xml_cl, piper_cl],

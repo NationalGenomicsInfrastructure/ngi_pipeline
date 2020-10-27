@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import unittest
 
-from ngi_pipeline.conductor.flowcell import process_demultiplexed_flowcells
+#from ngi_pipeline.conductor.flowcell import process_demultiplexed_flowcells
 from ngi_pipeline.database.classes import CharonSession, CharonError
 from ngi_pipeline.log.loggers import minimal_logger
 from ngi_pipeline.utils.config import load_yaml_config, locate_ngi_config
@@ -83,5 +83,5 @@ class AutomatedAnalysisTest(unittest.TestCase):
             charon_session.project_create(projectid=test_proj_id, name=test_proj_name,
                                           status="OPEN", best_practice_analysis=test_proj_bpa)
 
-            process_demultiplexed_flowcells([flowcell_path], fallback_libprep="A",
-                                            config=config)
+            #process_demultiplexed_flowcells([flowcell_path], fallback_libprep="A",
+            #                                config=config)

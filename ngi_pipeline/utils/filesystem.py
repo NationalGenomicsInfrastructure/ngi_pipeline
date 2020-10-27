@@ -280,7 +280,6 @@ def recreate_project_from_filesystem(project_dir,
                                      restrict_to_samples=None,
                                      restrict_to_libpreps=None,
                                      restrict_to_seqruns=None,
-                                     force_create_project=False,
                                      config=None, config_file_path=None):
     """Recreates the full project/sample/libprep/seqrun set of
     NGIObjects using the directory tree structure."""

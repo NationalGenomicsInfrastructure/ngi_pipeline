@@ -10,7 +10,7 @@ LOG = minimal_logger(__name__)
 
 def create_charon_entries_from_project(project, best_practice_analysis="whole_genome_reseq",
                                        sequencing_facility="NGI-S",
-                                       force_overwrite=False, delete_existing=False,
+                                       force_overwrite=False,
                                        retry_on_fail=True):
     """Given a project object, creates the relevant entries in Charon.
     This code is remarkably shoddy as I created it in a hurry and then later
@@ -20,7 +20,6 @@ def create_charon_entries_from_project(project, best_practice_analysis="whole_ge
     :param str best_practice_analysis: The workflow to assign for this project (default "variant_calling")
     :param str sequencing_facility: The facility that did the sequencing
     :param bool force_overwrite: If this is set to true, overwrite existing entries in Charon (default false)
-    :param bool delete_existing: Don't just update existing entries, delete them and create new ones (default false)
     """
     charon_session = CharonSession()
     update_failed=False
@@ -51,14 +50,6 @@ def create_charon_entries_from_project(project, best_practice_analysis="whole_ge
         else:
             raise
     for sample in project:
-        if delete_existing:
-            LOG.warning('Deleting existing sample "{}"'.format(sample))
-            try:
-                charon_session.sample_delete(projectid=project.project_id,
-                                             sampleid=sample.name)
-            except CharonError as e:
-                update_failed=True
-                LOG.error('Could not delete sample "{}": {}'.format(sample, e))
         try:
             analysis_status = "TO_ANALYZE"
             sample_data_status_value = "STALE"
@@ -89,14 +80,6 @@ def create_charon_entries_from_project(project, best_practice_analysis="whole_ge
                 LOG.error(e)
                 continue
         for libprep in sample:
-            if delete_existing:
-                LOG.warning('Deleting existing libprep "{}"'.format(libprep))
-                try:
-                    charon_session.libprep_delete(projectid=project.project_id,
-                                                  sampleid=sample.name,
-                                                  libprepid=libprep.name)
-                except CharonError as e:
-                    LOG.warning('Could not delete libprep "{}": {}'.format(libprep, e))
             try:
                 qc = "PASSED"
                 LOG.info('Creating libprep "{}" with qc status "{}"'.format(libprep, qc))
@@ -127,16 +110,6 @@ def create_charon_entries_from_project(project, best_practice_analysis="whole_ge
                     LOG.error(e)
                     continue
             for seqrun in libprep:
-                if delete_existing:
-                    LOG.warning('Deleting existing seqrun "{}"'.format(seqrun))
-                    try:
-                        charon_session.seqrun_delete(projectid=project.project_id,
-                                                     sampleid=sample.name,
-                                                     libprepid=libprep.name,
-                                                     seqrunid=seqrun.name)
-                    except CharonError as e:
-                        update_failed=True
-                        LOG.error('Could not delete seqrun "{}": {}'.format(seqrun, e))
                 try:
                     alignment_status="NOT_RUNNING"
                     LOG.info('Creating seqrun "{}" with alignment_status "{}"'.format(seqrun, alignment_status))
@@ -180,7 +153,7 @@ def create_charon_entries_from_project(project, best_practice_analysis="whole_ge
         if retry_on_fail:
             create_charon_entries_from_project(project, best_practice_analysis=best_practice_analysis,
                                        sequencing_facility=sequencing_facility,
-                                       force_overwrite=force_overwrite, delete_existing=delete_existing,
+                                       force_overwrite=force_overwrite,
                                        retry_on_fail=False)
         else:
             raise CharonError("A network error blocks Charon updating.")

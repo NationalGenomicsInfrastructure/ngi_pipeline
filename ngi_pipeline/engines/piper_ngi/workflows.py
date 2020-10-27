@@ -46,7 +46,7 @@ def get_subtasks_for_level(level):
 @with_ngi_config
 def return_cl_for_workflow(workflow_name, qscripts_dir_path, setup_xml_path, 
                            output_dir=None, exec_mode="local", genotype_file=None,
-                           config=None, config_file_path=None, generate_bqsr_bam=False):
+                           config=None, config_file_path=None):
     """Return an executable-ready Piper command line.
 
     :param str workflow_name: The name of the Piper workflow to be run.
@@ -73,8 +73,7 @@ def return_cl_for_workflow(workflow_name, qscripts_dir_path, setup_xml_path,
                              setup_xml_path=setup_xml_path,
                              config=config, exec_mode=exec_mode,
                              genotype_file=genotype_file,
-                             output_dir=output_dir,
-                             generate_bqsr_bam=generate_bqsr_bam)
+                             output_dir=output_dir)
 
 #def workflow_dna_alignonly(*args, **kwargs):
 #    """Return the command line for basic DNA Alignment.
@@ -102,9 +101,8 @@ def workflow_merge_process_variantcall(*args, **kwargs):
     cl_args = ["--variant_calling",
                "--analyze_separately",
                "--retry_failed",
-               "2"]
-    if not kwargs.get('generate_bqsr_bam', False):
-        cl_args.append("--keep_pre_bqsr_bam")
+               "2",
+               "--keep_pre_bqsr_bam"]
     return "{} {}".format(cl_string, " ".join(cl_args))
 
 
