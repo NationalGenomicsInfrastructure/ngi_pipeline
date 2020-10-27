@@ -7,9 +7,9 @@ import tempfile
 import unittest
 import filecmp
 
-from ngi_pipeline.utils.filesystem import chdir, curdir_tmpdir, do_rsync, execute_command_line, \
-                                          load_modules, safe_makedir, do_hardlink, do_symlink, \
-                                          locate_flowcell, locate_project, is_index_file
+from ngi_pipeline.utils.filesystem import chdir, execute_command_line, load_modules, \
+                                        safe_makedir, do_hardlink, do_symlink, \
+                                        locate_flowcell, locate_project, is_index_file
 
 class TestFilesystemUtils(unittest.TestCase):
 
@@ -79,18 +79,6 @@ class TestFilesystemUtils(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             execute_command_line(cl)
 
-    def test_do_rsync(self):
-        src_dir = tempfile.mkdtemp()
-        dst_dir = tempfile.mkdtemp()
-        file_names = ["file1.txt", "file2.txt"]
-        src_file_paths = [os.path.join(src_dir, file_name) for file_name in file_names]
-        dst_file_paths = [os.path.join(dst_dir, file_name) for file_name in file_names]
-        for src_file_path in src_file_paths:
-            open(src_file_path, 'w').close()
-        do_rsync(src_file_paths, dst_dir)
-        for dst_file_path in dst_file_paths:
-            assert(os.path.exists(dst_file_path))
-
     def test_do_links(self):
         src_tmp_dir = tempfile.mkdtemp()
         dst_tmp_dir = os.path.join(src_tmp_dir, 'dst' )
@@ -114,11 +102,6 @@ class TestFilesystemUtils(unittest.TestCase):
         dir_tree = os.path.join(self.tmp_dir, "first", "second", "third")
         safe_makedir(dir_tree)
         assert(os.path.exists(dir_tree))
-
-    def test_curdir_tmpdir(self):
-        with curdir_tmpdir() as new_tmp_dir:
-            assert(os.path.exists(new_tmp_dir))
-        assert(not os.path.exists(new_tmp_dir)), "Directory is not properly removed after creation"
 
     def test_chdir(self):
         original_dir = os.path.realpath(os.getcwd())

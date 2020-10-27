@@ -190,21 +190,6 @@ def do_link(src_files, dst_dir, link_type='soft'):
             link_f(os.path.realpath(src_file), dst_file)
 
 
-def do_rsync(src_files, dst_dir):
-    ## TODO I changed this -c because it takes for goddamn ever but I'll set it back once in Production
-    #cl = ["rsync", "-car"]
-    cl = ["rsync", "-av"]
-    cl.extend(src_files)
-    cl.append(dst_dir)
-    cl = map(str, cl)
-    # Use for testing: just touch the files rather than copy them
-    #for f in src_files:
-    #    open(os.path.join(dst_dir,os.path.basename(f)),"w").close()
-    subprocess.check_call(cl)
-    #execute_command_line(cl)
-    return [ os.path.join(dst_dir,os.path.basename(f)) for f in src_files ]
-
-
 def safe_makedir(dname, mode=0o2770):
     """Make a directory (tree) if it doesn't exist, handling concurrent race
     conditions.
@@ -244,23 +229,6 @@ def rotate_file(file_path, new_subdirectory="rotated_files"):
         except OSError as e:
             raise OSError('Could not rotate log file "{}" to "{}": '
                           '{}'.format(file_path, rotate_file_path, e))
-
-@contextlib.contextmanager
-def curdir_tmpdir(remove=True):
-    """Context manager to create and remove a temporary directory.
-    """
-    tmp_dir_base = os.path.join(os.getcwd(), "tmp")
-    safe_makedir(tmp_dir_base)
-    tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
-    safe_makedir(tmp_dir)
-    # Explicitly change the permissions on the temp directory to make it writable by group
-    os.chmod(tmp_dir, stat.S_IRWXU | stat.S_IRWXG)
-    try:
-        yield tmp_dir
-    finally:
-        if remove:
-            shutil.rmtree(tmp_dir)
-
 
 @contextlib.contextmanager
 def chdir(new_dir):

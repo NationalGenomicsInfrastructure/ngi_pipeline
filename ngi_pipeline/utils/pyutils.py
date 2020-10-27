@@ -11,23 +11,3 @@ def flatten(nested_list):
                 yield sub
         else:
             yield elt
-
-def update_dict(original_dict, updater_dict):
-    """Updates a dictionary in a nested fashion, replacing and adding individual
-    keys/values but not overwriting entire nested dicts.
-
-    :param dict original_dict: The dict to update
-    :param dict updater_dict: The dict with the keys/values to update the original
-
-    :return: A copy of the original dict updated with the new keys/values
-    :rtype: dict
-    """
-
-    updated_dict = copy.deepcopy(original_dict)
-    for key, value in updater_dict.iteritems():
-        if updated_dict.get(key) and type(updated_dict[key]) is dict and type(value) is dict:
-            # If the value itself is a dict, we want to update, not overwrite
-            updated_dict[key] = update_dict(updated_dict[key], value)
-        else:
-            updated_dict[key] = value
-    return updated_dict
