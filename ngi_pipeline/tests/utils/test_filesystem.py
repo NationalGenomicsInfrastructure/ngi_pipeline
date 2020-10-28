@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import unittest
 import filecmp
+import mock
 
 from ngi_pipeline.utils.filesystem import chdir, execute_command_line, load_modules, \
                                         safe_makedir, do_hardlink, do_symlink, \
@@ -62,11 +63,13 @@ class TestFilesystemUtils(unittest.TestCase):
         self.assertEqual(locate_project(project=project_name, config=config),
                          tmp_project_path)
 
-
-    def test_load_modules(self):
-        modules_to_load = ['R/3.1.0', 'java/sun_jdk1.7.0_25']
+    @mock.patch('ngi_pipeline.utils.filesystem.shlex.split')
+    def test_load_modules(self, mock_split):
+        mock_split.return_value = ['echo', 'os.environ["TEST"] = "test";']
+        modules_to_load = ['Any/module']
         load_modules(modules_to_load)
-        assert(subprocess.check_output(shlex.split("R --version")).split()[2] == "3.1.0")
+        set_envar = os.environ.get('TEST')
+        self.assertEqual(set_envar, 'test')
 
     def test_execute_command_line(self):
         cl = "hostname"
