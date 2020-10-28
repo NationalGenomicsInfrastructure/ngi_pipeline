@@ -1,11 +1,11 @@
 from ngi_pipeline.utils.classes import with_ngi_config
 
 @with_ngi_config
-def test_function(config=None, config_file_path=None):
+def some_function(config=None, config_file_path=None):
     return config
 
 def test_with_ngi_config():
-    got_config = test_function(config_file_path='../data/test_ngi_config_minimal.yaml')
+    got_config = some_function(config_file_path='../data/test_ngi_config_minimal.yaml')
     expected_config = {'mail': {'recipient': 'some_user@some_email.com'}, 
                         'logging': {'log_file': '/some/log/file.log'}, 
                         'analysis': {'sthlm_root': 'ngi2016003', 
