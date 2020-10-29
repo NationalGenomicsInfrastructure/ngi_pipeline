@@ -21,7 +21,7 @@ class TestFilesystemUtils(unittest.TestCase):
     def test_locate_flowcell(self):
         flowcell_name = "temp_flowcell"
         tmp_dir = tempfile.mkdtemp()
-        config = {'environment': {'flowcell_inbox': tmp_dir}}
+        config = {'environment': {'flowcell_inbox': [tmp_dir]}}
         with self.assertRaises(ValueError):
             # Should raise ValueError if flowcell can't be found
             locate_flowcell(flowcell=flowcell_name, config=config)
@@ -37,19 +37,23 @@ class TestFilesystemUtils(unittest.TestCase):
                          tmp_flowcell_path)
 
         # Should return the full path after searching flowcell_inbox
-        self.assertEqual(locate_flowcell(flowcell=flowcell_name, config=config),
-                         tmp_flowcell_path)
+        fc = locate_flowcell(flowcell=flowcell_name, config=config)
+        self.assertEqual(fc, tmp_flowcell_path)
 
 
     def test_locate_project(self):
         project_name = "temp_project"
         tmp_dir = tempfile.mkdtemp()
-        config = {'analysis': {'top_dir': tmp_dir}}
+        sthlm_root = 'sthlm_root'
+        top_dir = 'top_dir'
+        config = {'analysis': {'base_root': tmp_dir,                        
+                                'sthlm_root': sthlm_root,
+                                'top_dir': top_dir}}
         with self.assertRaises(ValueError):
             # Should raise ValueError if project can't be found
             locate_project(project=project_name, config=config)
 
-        tmp_project_path = os.path.join(tmp_dir, "DATA", project_name)
+        tmp_project_path = os.path.join(tmp_dir, sthlm_root, top_dir, 'DATA', project_name)
         with self.assertRaises(ValueError):
             # Should raise ValueError as path given doesn't exist
             locate_project(project=tmp_project_path, config=config)
