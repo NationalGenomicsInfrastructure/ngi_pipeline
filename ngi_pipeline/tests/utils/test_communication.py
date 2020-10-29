@@ -21,7 +21,7 @@ class TestCommunication(unittest.TestCase):
                       level="INFO",
                       info_text="Some information",
                       workflow=self.workflow,
-                      config_file_path='../data/test_ngi_config_minimal.yaml')
+                      config_file_path='data/test_ngi_config_minimal.yaml')
         mock_mail.assert_called_once_with(origin='ngi_pipeline@scilifelab.se', 
                                             recipient='some_user@some_email.com', 
                                             subject='[S.One_15_01] [Some Workflow] [INFO] analysis information / status update', 
@@ -46,7 +46,7 @@ class TestCommunication(unittest.TestCase):
                       level="WARN",
                       info_text="Warning: some warning",
                       workflow=self.workflow,
-                      config_file_path='../data/test_ngi_config_minimal.yaml')
+                      config_file_path='data/test_ngi_config_minimal.yaml')
         mock_mail.assert_called_once_with(origin='ngi_pipeline@scilifelab.se', 
                                             recipient='some_user@some_email.com', 
                                             subject='[S.One_15_01] [Some Workflow] [WARN] analysis intervention may be needed', 
@@ -71,7 +71,7 @@ class TestCommunication(unittest.TestCase):
                       level="ERROR",
                       info_text="Error: some error",
                       workflow=self.workflow,
-                      config_file_path='../data/test_ngi_config_minimal.yaml')
+                      config_file_path='data/test_ngi_config_minimal.yaml')
         mock_mail.assert_called_once_with(origin='ngi_pipeline@scilifelab.se', 
                                             recipient='some_user@some_email.com',
                                             subject='[S.One_15_01] [Some Workflow] [ERROR] analysis intervention required', 
