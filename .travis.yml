@@ -8,9 +8,12 @@ install:
 
 before_script:
     - mkdir ~/.ngipipeline && cp test_ngi_config.yaml ~/.ngipipeline/ngi_config.yaml
+    - cd ngi_pipeline/tests
+    - export CHARON_BASE_URL="charon-url"                                                                               sara.sjunnebo@sarasmbp
+    - export CHARON_API_TOKEN="token"
 
 script:
-    - pytest --cov=ngi_pipeline ngi_pipeline/tests/engines/ ngi_pipeline/tests/conductor/ ngi_pipeline/tests/utils/test_parsers.py
+    - pytest --cov=ngi_pipeline engines/ conductor/ utils/
 
 after_success:
   - codecov

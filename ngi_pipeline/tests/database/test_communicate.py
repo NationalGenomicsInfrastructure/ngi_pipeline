@@ -1,35 +1,31 @@
-import json
 import unittest
+import mock
 
-from ngi_pipeline.conductor.classes import NGIProject
-from ngi_pipeline.database.classes import CharonSession
 from ngi_pipeline.database.communicate import get_project_id_from_name
+from ngi_pipeline.database.classes import CharonError
 
 class TestCommunicate(unittest.TestCase):
 
     def setUp(self):
-        # Create the test project
-        self.project_id = "P100000"
-        self.project_name = "P.Mayhem_14_01"
-        self.project_data = dict(projectid=self.project_id, name=self.project_name, status=None)
-        self.session = CharonSession()
-        response = self.session.post(self.session.construct_charon_url('project'),
-                                     data=json.dumps(self.project_data))
-        assert response.status_code == 201, "Could not create test project in Charon: {}".format(response.reason)
-        project = response.json()
-        assert project['projectid'] == self.project_id, "Test project ID is incorrect"
+        self.project_id = 'P100000'
+        self.project_name = 'S.One_20_01'
 
-
-    def tearDown(self):
-        # Remove the test project
-        response = self.session.delete(self.session.construct_charon_url('project', self.project_id))
-        assert response.status_code == 204, "Could not delete test project from Charon: {}".format(response.reason)
-
-
-    def test_get_project_id_from_name(self):
-        # Check that it matches
+    @mock.patch('ngi_pipeline.database.communicate.CharonSession.project_get')
+    def test_get_project_id_from_name(self, mock_get):
+        """Return project ID given the project name"""
+        mock_get.return_value = {'projectid': 'P100000'}
         self.assertEqual(self.project_id, get_project_id_from_name(self.project_name))
 
-    def test_rebuild_project_obj_from_charon(self):
-        # Create fake project / sample / libprep / seqrun
-        pass
+    @mock.patch('ngi_pipeline.database.communicate.CharonSession.project_get')
+    def test_get_project_id_from_name_missing_proj(self, mock_get):
+        """Raise ValueError if project is missing"""
+        mock_get.side_effect = CharonError('Error', status_code=404)
+        with self.assertRaises(ValueError):
+            get_project_id_from_name(self.project_name)
+
+    @mock.patch('ngi_pipeline.database.communicate.CharonSession.project_get')
+    def test_get_project_id_from_name_missing_id(self, mock_get):
+        """Raise ValueError if 'projectid' is missing"""
+        mock_get.return_value = {}
+        with self.assertRaises(ValueError):
+            get_project_id_from_name(self.project_name)
