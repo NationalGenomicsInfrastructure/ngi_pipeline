@@ -9,7 +9,7 @@ install:
 before_script:
     - mkdir ~/.ngipipeline && cp test_ngi_config.yaml ~/.ngipipeline/ngi_config.yaml
     - cd ngi_pipeline/tests
-    - export CHARON_BASE_URL="charon-url"                                                                               sara.sjunnebo@sarasmbp
+    - export CHARON_BASE_URL="charon-url"
     - export CHARON_API_TOKEN="token"
 
 script:
