@@ -5,18 +5,18 @@ python:
 
 install:
     - pip install -e . -r ./requirements-dev.txt
+    - pip install codecov
 
 before_script:
     - mkdir ~/.ngipipeline && cp test_ngi_config.yaml ~/.ngipipeline/ngi_config.yaml
-    - cd ngi_pipeline/tests
     - export CHARON_BASE_URL="charon-url"
     - export CHARON_API_TOKEN="token"
 
 script:
-    - pytest --cov=ngi_pipeline engines/ conductor/ utils/
+    - cd ngi_pipeline/tests && pytest --cov=ngi_pipeline engines/ conductor/ utils/
 
 after_success:
-  - codecov
+    - codecov
 
 notifications:
     email: false
