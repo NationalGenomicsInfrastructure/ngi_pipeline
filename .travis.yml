@@ -13,7 +13,7 @@ before_script:
     - export CHARON_API_TOKEN="token"
 
 script:
-    - cd ngi_pipeline/tests && nosetests --with-coverage -v -s engines/ conductor/ utils/
+    - cd ngi_pipeline/tests && nosetests --with-coverage -v -s engines/ conductor/ utils/ conductor/
 
 after_success:
     - codecov
