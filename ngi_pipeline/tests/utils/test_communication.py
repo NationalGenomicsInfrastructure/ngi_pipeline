@@ -1,6 +1,6 @@
 import unittest
 import mock
-from ngi_pipeline.utils.communication import mail_analysis
+from ngi_pipeline.utils.communication import mail, mail_analysis
 
 class TestCommunication(unittest.TestCase):
     @classmethod
@@ -85,3 +85,19 @@ class TestCommunication(unittest.TestCase):
                                                     'Additional information:\n\n'
                                                     'Error: some error\n'))
 
+    @mock.patch('ngi_pipeline.utils.communication.smtplib.SMTP')
+    def test_mail(self, mock_SMTP):
+        recipient = 'some_user@some_email.com'
+        subject = 'Hello!'
+        text = 'Is it me you are looking for?'
+        mail(recipient, subject, text, origin='sender@email.com')
+        message = ('Content-Type: text/plain; charset="us-ascii"\n'
+                    'MIME-Version: 1.0\n'
+                    'Content-Transfer-Encoding: 7bit\n'
+                    'Subject: [NGI_pipeline] Hello!\n'
+                    'From: sender@email.com\n'
+                    'To: some_user@some_email.com\n\n'
+                    'Is it me you are looking for?')
+        mock_SMTP().sendmail.assert_called_once_with('funk_002@nestor1.uppmax.uu.se', 
+                                                        recipient,
+                                                        message)
