@@ -345,7 +345,7 @@ def update_sample_duplication_and_coverage(project_id, sample_id, project_base_p
     except CharonError as e:
         error_text = ('Could not update project/sample "{}/{}" '
                     'in Charon with duplication rate : {}'
-                      'and coverage {}'.format("{}/{}".format(project_id, sampleid, dup_pc, cov)))
+                      'and coverage {}'.format(project_id, sample_id, dup_pc, cov))
         LOG.error(error_text)
         if not config.get('quiet'):
             mail_analysis(project_name=project_id, sample_name=sample_id,
