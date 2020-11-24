@@ -1,7 +1,10 @@
 import mock
+import os
+
 from ngi_pipeline.conductor.launchers import launch_analysis
 from ngi_pipeline.conductor.classes import NGIProject
 
+@mock.patch.dict(os.environ, {'CHARON_BASE_URL': 'charon-url', 'CHARON_API_TOKEN': 'token'})
 @mock.patch('ngi_pipeline.conductor.classes.CharonSession.project_get')
 @mock.patch('ngi_pipeline.engines.sarek.local_process_tracking.update_charon_with_local_jobs_status')
 @mock.patch('ngi_pipeline.engines.sarek.analyze')

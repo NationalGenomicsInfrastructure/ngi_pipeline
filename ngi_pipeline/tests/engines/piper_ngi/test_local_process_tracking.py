@@ -12,7 +12,7 @@ class TestLocalProcessTracking(unittest.TestCase):
     def setUpClass(self):
         self.tmp_dir = tempfile.mkdtemp()
         self.config = {'database': {'record_tracking_db_path': 
-                                        '{}/record_tracking_database.sql'.format(self.tmp_dir)}}
+                                    '{}/record_tracking_database.sql'.format(self.tmp_dir)}}
         self.workflow_name = 'workflow'
         self.project_base_path = self.tmp_dir
         self.project_name = 'S.One'
@@ -42,7 +42,9 @@ class TestLocalProcessTracking(unittest.TestCase):
         mock_cov.return_value = 0.5
         mock_reads.return_value = 100
         
-        tracking.update_sample_duplication_and_coverage(self.project_id, self.sample_id, self.project_base_path)
+        tracking.update_sample_duplication_and_coverage(self.project_id, 
+                                                        self.sample_id, 
+                                                        self.project_base_path)
         mock_charon().sample_update.assert_called_once_with(duplication_pc=50, 
                                                             projectid='P123', 
                                                             sampleid='P123_1001', 
@@ -65,7 +67,9 @@ class TestLocalProcessTracking(unittest.TestCase):
         genome_results = os.path.join(seqrun_location, 'genome_results.txt')
         open(genome_results, 'w').close()
 
-        tracking.update_coverage_for_sample_seqruns(self.project_id, self.sample_id, piper_qc_dir)
+        tracking.update_coverage_for_sample_seqruns(self.project_id, 
+                                                    self.sample_id, 
+                                                    piper_qc_dir)
         mock_charon().seqrun_update.assert_called_once_with(libprepid='libprep_01', 
                                                             mean_autosomal_coverage=50, 
                                                             projectid='P123', 
@@ -79,6 +83,9 @@ class TestLocalProcessTracking(unittest.TestCase):
         with open(exit_file, 'w') as f:
             f.write('0')
         mock_path.return_value = exit_file
-        got_exit_code = tracking.get_exit_code(self.workflow_name, self.project_base_path, 
-                                                self.project_name, self.project_id, self.sample_id)
+        got_exit_code = tracking.get_exit_code(self.workflow_name, 
+                                               self.project_base_path, 
+                                               self.project_name, 
+                                               self.project_id, 
+                                               self.sample_id)
         self.assertEqual(got_exit_code, 0)

@@ -3,6 +3,7 @@ import mock
 import tempfile
 import os
 import shutil
+import yaml
 
 import ngi_pipeline.engines.piper_ngi.utils as utils
 from ngi_pipeline.conductor.classes import NGIProject, NGISample
@@ -29,24 +30,34 @@ class TestPiperUtils(unittest.TestCase):
         shutil.rmtree(self.tmp_dir)
 
     def test_find_previous_genotype_analyses(self):
-        project_dir = os.path.join(self.tmp_dir, 'ANALYSIS', 'P123', 'piper_ngi', '01_genotype_concordance')
+        project_dir = os.path.join(self.tmp_dir, 
+                                   'ANALYSIS', 
+                                   'P123', 
+                                   'piper_ngi', 
+                                   '01_genotype_concordance')
         os.makedirs(project_dir)
         sample_file = os.path.join(project_dir, 'P123_1001.gtc')
         open(sample_file, 'w').close()
 
-        previous_analysis_not_done = utils.find_previous_genotype_analyses(self.project_obj, self.sample_obj)
+        previous_analysis_not_done = utils.find_previous_genotype_analyses(self.project_obj, 
+                                                                           self.sample_obj)
         self.assertFalse(previous_analysis_not_done)
 
         sample_done_file = os.path.join(project_dir, '.P123_1001.gtc.done')
         open(sample_done_file, 'w').close()
 
-        previous_analysis_done = utils.find_previous_genotype_analyses(self.project_obj, self.sample_obj)
+        previous_analysis_done = utils.find_previous_genotype_analyses(self.project_obj, 
+                                                                       self.sample_obj)
         self.assertTrue(previous_analysis_done)
-        shutil.rmtree(project_dir) # Remove it or it will interfere with other tests
+        shutil.rmtree(project_dir) # Remove dir or it will interfere with other tests
 
     @mock.patch('ngi_pipeline.engines.piper_ngi.utils.os.remove')
     def test_remove_previous_genotype_analyses(self, mock_remove):
-        project_dir = os.path.join(self.tmp_dir, 'ANALYSIS', 'P123', 'piper_ngi', '02_genotype_concordance')
+        project_dir = os.path.join(self.tmp_dir, 
+                                   'ANALYSIS', 
+                                   'P123', 
+                                   'piper_ngi', 
+                                   '02_genotype_concordance')
         os.makedirs(project_dir)
         sample_file = os.path.join(project_dir, 'P123-1001.gtc')
         open(sample_file, 'w').close()
@@ -64,7 +75,11 @@ class TestPiperUtils(unittest.TestCase):
         mock_remove.assert_called_once_with(file_to_remove)
 
     def test_find_previous_sample_analyses(self):
-        project_dir = os.path.join(self.tmp_dir, 'ANALYSIS', 'P123', 'piper_ngi', '01_files')
+        project_dir = os.path.join(self.tmp_dir, 
+                                   'ANALYSIS', 
+                                   'P123', 
+                                   'piper_ngi', 
+                                   '01_files')
         os.makedirs(project_dir)
         sample_file = os.path.join(project_dir, 'P123_1001.out')
         open(sample_file, 'w').close()
@@ -76,7 +91,11 @@ class TestPiperUtils(unittest.TestCase):
     @mock.patch('ngi_pipeline.engines.piper_ngi.utils.shutil.move')
     def test_rotate_previous_analysis(self, mock_move, mock_datetime):
         mock_datetime.datetime.now().strftime.return_value = '2020-11-13_09:30:12:640314'
-        analysis_dir = os.path.join(self.tmp_dir, 'ANALYSIS', 'P123', 'piper_ngi', '03_raw_alignments')
+        analysis_dir = os.path.join(self.tmp_dir, 
+                                    'ANALYSIS', 
+                                    'P123', 
+                                    'piper_ngi', 
+                                    '03_raw_alignments')
         os.makedirs(analysis_dir)
         sample_file = os.path.join(analysis_dir, 'P123-1001.bam')
         open(sample_file, 'w').close()
@@ -88,8 +107,10 @@ class TestPiperUtils(unittest.TestCase):
 
     @mock.patch('ngi_pipeline.engines.piper_ngi.utils.CharonSession')
     def test_get_finished_seqruns_for_sample(self, mock_charon):
-        mock_charon().sample_get_libpreps.return_value = {'libpreps': [{'qc': 'PASS',
-                                                                        'libprepid': 'A'}]}
+        mock_charon().sample_get_libpreps.return_value = {'libpreps': [{'qc': 'PASS', 
+                                                                        'libprepid': 'A'
+                                                                        }]
+                                                          }
         mock_charon().libprep_get_seqruns.return_value = {'seqruns': [{'seqrunid': 'B'}]}
         mock_charon().seqrun_get.return_value = {'alignment_status': 'DONE'}
 
@@ -101,11 +122,13 @@ class TestPiperUtils(unittest.TestCase):
     @mock.patch('ngi_pipeline.engines.piper_ngi.utils.CharonSession')
     def test_get_valid_seqruns_for_sample(self, mock_charon):
         mock_charon().sample_get_libpreps.return_value = {'libpreps': [{'qc': 'PASS',
-                                                                        'libprepid': 'A'}]}
+                                                                        'libprepid': 'A'
+                                                                        }]
+                                                          }
         mock_charon().libprep_get_seqruns.return_value = {'seqruns': [{'seqrunid': 'B'}]}
-        mock_charon().seqrun_get.return_value = {}
 
-        got_libpreps = utils.get_valid_seqruns_for_sample(self.project_id, self.sample_id)
+        got_libpreps = utils.get_valid_seqruns_for_sample(self.project_id, 
+                                                          self.sample_id)
         expected_libpreps = {'A': ['B']}
 
         self.assertEqual(got_libpreps, expected_libpreps)
@@ -113,26 +136,34 @@ class TestPiperUtils(unittest.TestCase):
     def test_record_analysis_details(self):
         job_identifier = 'job_id'
         utils.record_analysis_details(self.project_obj, job_identifier)
-        output_file_path = os.path.join(self.tmp_dir, 'ANALYSIS/P123/piper_ngi/logs/job_id.files')
+        output_file_path = os.path.join(self.tmp_dir, 
+                                        'ANALYSIS', 
+                                        'P123',
+                                        'piper_ngi',
+                                        'logs',
+                                        'job_id.files')
         with open(output_file_path, 'r') as f:
-            got_content = f.read()
-        expected_content = 'P123:\n  P123_1001: {}\n'
+            got_content = yaml.load(f, Loader=yaml.FullLoader)
+        expected_content = {'P123': {'P123_1001': {}}}
         self.assertEqual(got_content, expected_content)
         
     def test_create_project_obj_from_analysis_log(self):
-        log_path = os.path.join(self.project_base_path, 'ANALYSIS',
-                                self.project_id, 'piper_ngi', 'logs')
+        log_path = os.path.join(self.project_base_path, 
+                                'ANALYSIS',
+                                self.project_id, 
+                                'piper_ngi', 
+                                'logs')
         os.makedirs(log_path)
         log_file = os.path.join(log_path, 'P123-P123_1001-workflow.files')
         log_content = ['{P123: {P123_1001: {}}}']
         with open(log_file, 'w') as f:
-            f.write("\n".join(log_content))
+            f.write('\n'.join(log_content))
         
         got_project_obj = utils.create_project_obj_from_analysis_log(self.project_name, 
-                                                                        self.project_id,
-                                                                        self.project_base_path,
-                                                                        self.sample_id, 
-                                                                        'workflow')
+                                                                     self.project_id,
+                                                                     self.project_base_path,
+                                                                     self.sample_id, 
+                                                                     'workflow')
         self.assertEqual(got_project_obj, self.project_obj)
 
     @mock.patch('ngi_pipeline.engines.piper_ngi.utils.CharonSession')
@@ -145,13 +176,19 @@ class TestPiperUtils(unittest.TestCase):
         restart_finished_jobs = False
 
         with self.assertRaises(RuntimeError):
-            utils.check_for_preexisting_sample_runs(self.project_obj, self.sample_obj,
-                                                    restart_running_jobs, restart_finished_jobs)
+            utils.check_for_preexisting_sample_runs(self.project_obj, 
+                                                    self.sample_obj,
+                                                    restart_running_jobs, 
+                                                    restart_finished_jobs)
         
     def test_create_sbatch_header(self):
-        got_header = utils.create_sbatch_header('slurm_project_id', 'slurm_queue',
-                                                17, 'slurm_time', 'job_name',
-                                                'slurm_out_log', 'slurm_err_log')
+        got_header = utils.create_sbatch_header('slurm_project_id', 
+                                                'slurm_queue',
+                                                17, 
+                                                'slurm_time', 
+                                                'job_name',
+                                                'slurm_out_log', 
+                                                'slurm_err_log')
         expected_header = """#!/bin/bash -l
 
 #SBATCH -A slurm_project_id
@@ -173,12 +210,12 @@ class TestPiperUtils(unittest.TestCase):
 
     def test_create_log_file_path(self):
         got_path = utils.create_log_file_path(self.workflow_subtask, 
-                                                self.project_base_path, 
-                                                self.project_name, 
-                                                self.project_id, 
-                                                sample_id=self.sample_id, 
-                                                libprep_id=self.libprep_id, 
-                                                seqrun_id=self.seqrun_id)
+                                              self.project_base_path, 
+                                              self.project_name, 
+                                              self.project_id, 
+                                              sample_id=self.sample_id, 
+                                              libprep_id=self.libprep_id, 
+                                              seqrun_id=self.seqrun_id)
         expected_path = '{}/ANALYSIS/P123/piper_ngi/logs/P123-P123_1001-A-seqrun-subtask.log'.format(self.tmp_dir)
 
         self.assertEqual(got_path, expected_path)
@@ -197,13 +234,12 @@ class TestPiperUtils(unittest.TestCase):
 
     def test__create_generic_output_file_path(self):
         got_path = utils._create_generic_output_file_path(self.workflow_subtask, 
-                                                            self.project_base_path, 
-                                                            self.project_name, 
-                                                            self.project_id, 
-                                                            sample_id=self.sample_id, 
-                                                            libprep_id=self.libprep_id, 
-                                                            seqrun_id=self.seqrun_id)
+                                                          self.project_base_path, 
+                                                          self.project_name, 
+                                                          self.project_id, 
+                                                          sample_id=self.sample_id, 
+                                                          libprep_id=self.libprep_id, 
+                                                          seqrun_id=self.seqrun_id)
         expected_path = '{}/ANALYSIS/P123/piper_ngi/logs/P123-P123_1001-A-seqrun-subtask'.format(self.tmp_dir)
 
         self.assertEqual(got_path, expected_path)
-                                        

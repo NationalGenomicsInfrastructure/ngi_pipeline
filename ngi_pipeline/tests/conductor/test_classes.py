@@ -1,8 +1,11 @@
 import unittest
 import mock
+import os
+
 from ngi_pipeline.conductor.classes import NGIAnalysis, NGIObject, \
                                             NGIProject, NGISeqRun, \
-                                                get_engine_for_bp, load_engine_module
+                                                get_engine_for_bp, \
+                                                    load_engine_module
 
 class TestNGIAnalysis(unittest.TestCase):
 
@@ -34,6 +37,7 @@ class TestNGIProject(unittest.TestCase):
 
 class TestHelperFunctions(unittest.TestCase):
 
+    @mock.patch.dict(os.environ, {'CHARON_BASE_URL': 'charon-url', 'CHARON_API_TOKEN': 'token'})
     @mock.patch('ngi_pipeline.conductor.classes.CharonSession.project_get')
     @mock.patch('ngi_pipeline.conductor.classes.load_engine_module')
     def test_get_engine_for_bp(self, mock_load, mock_charon):
@@ -49,9 +53,8 @@ class TestHelperFunctions(unittest.TestCase):
     @mock.patch('ngi_pipeline.conductor.classes.importlib.import_module')
     def test_load_engine_module(self, mock_import):
         mock_import.return_value = 'some_engine'
-        BP_analysis = 'some_BP'
         conf = {'analysis': {'best_practice_analysis': {'some_BP': {'analysis_engine': 'some_engine'}}}}
-        got_engine = load_engine_module(BP_analysis, conf)
+        got_engine = load_engine_module('some_BP', conf)
         
         mock_import.assert_called_once_with('some_engine')
         self.assertEqual(got_engine, 'some_engine')

@@ -1,5 +1,6 @@
 import unittest
 import mock
+import os
 
 from ngi_pipeline.conductor.classes import NGIProject
 from ngi_pipeline.database.classes import CharonError
@@ -29,6 +30,7 @@ class TestCharonFunctions(unittest.TestCase):
         self.seqrun_obj = self.libprep_obj.add_seqrun(name=self.seqrun_id,
                                                       dirname=self.seqrun_id)
 
+    @mock.patch.dict(os.environ, {'CHARON_BASE_URL': 'charon-url', 'CHARON_API_TOKEN': 'token'})
     @mock.patch('ngi_pipeline.database.filesystem.CharonSession.project_create')
     @mock.patch('ngi_pipeline.database.filesystem.CharonSession.sample_create')
     @mock.patch('ngi_pipeline.database.filesystem.CharonSession.libprep_create')
@@ -55,7 +57,7 @@ class TestCharonFunctions(unittest.TestCase):
                                             seqrunid='201030_A00187_0332_AHFCFLDSXX', 
                                             total_reads=0)
 
-
+    @mock.patch.dict(os.environ, {'CHARON_BASE_URL': 'charon-url', 'CHARON_API_TOKEN': 'token'})
     @mock.patch('ngi_pipeline.database.filesystem.CharonSession.project_create')
     @mock.patch('ngi_pipeline.database.filesystem.CharonSession.project_update')
     @mock.patch('ngi_pipeline.database.filesystem.CharonSession.sample_create')
@@ -77,10 +79,10 @@ class TestCharonFunctions(unittest.TestCase):
         create_charon_entries_from_project(self.project_obj, force_overwrite=True)
 
         mock_project_ud.assert_called_once_with(best_practice_analysis='whole_genome_reseq', 
-                                            name='S.One_20_02', 
-                                            projectid='P100001', 
-                                            sequencing_facility='NGI-S', 
-                                            status='OPEN')
+                                                name='S.One_20_02', 
+                                                projectid='P100001', 
+                                                sequencing_facility='NGI-S', 
+                                                status='OPEN')
         mock_sample_ud.assert_called_once_with(analysis_status='TO_ANALYZE', 
                                                projectid='P100001', 
                                                sampleid='P100001_101', 

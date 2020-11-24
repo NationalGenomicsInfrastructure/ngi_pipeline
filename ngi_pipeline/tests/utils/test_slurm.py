@@ -22,7 +22,11 @@ class TestSlurm(unittest.TestCase):
 
     @mock.patch('ngi_pipeline.utils.slurm.subprocess.check_output')
     def test_get_slurm_job_status(self, mock_subprocess):
-        mock_subprocess.side_effect = ['PENDING', 'COMPLETED', 'CANCELLED', '', 'Whut']
+        mock_subprocess.side_effect = ['PENDING', 
+                                       'COMPLETED', 
+                                       'CANCELLED', 
+                                       '', 
+                                       'Whut']
 
         got_job_status = slurm.get_slurm_job_status(self.slurm_job_id)
         self.assertIsNone(got_job_status)

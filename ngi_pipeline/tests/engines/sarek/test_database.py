@@ -252,22 +252,32 @@ class TestCharonConnector(unittest.TestCase):
     def test_libprep_qc_status(self, charon_session_mock):
         self._get_charon_connector(charon_session_mock.return_value)
         self.charon_connector.charon_session.libprep_get.return_value = {'qc': 'qc_status'}
-        qc_status = self.charon_connector.libprep_qc_status(self.project_id, self.sample_id, self.libprep_id)
+        qc_status = self.charon_connector.libprep_qc_status(self.project_id, 
+                                                            self.sample_id, 
+                                                            self.libprep_id)
         self.assertEqual(qc_status, 'qc_status')
 
         self.charon_connector.charon_session.libprep_get.return_value = {}
         with self.assertRaises(SampleLookupError):
-            qc_status = self.charon_connector.libprep_qc_status(self.project_id, self.sample_id, self.libprep_id)
+            qc_status = self.charon_connector.libprep_qc_status(self.project_id,
+                                                                self.sample_id,
+                                                                self.libprep_id)
 
     def test_seqrun_alignment_status(self, charon_session_mock):
         self._get_charon_connector(charon_session_mock.return_value)
         self.charon_connector.charon_session.seqrun_get.return_value = {'alignment_status': 'alignment_status'}
-        alignment_status = self.charon_connector.seqrun_alignment_status(self.project_id, self.sample_id, self.libprep_id, 'seqrun_id')
+        alignment_status = self.charon_connector.seqrun_alignment_status(self.project_id,
+                                                                         self.sample_id,
+                                                                         self.libprep_id,
+                                                                         'seqrun_id')
         self.assertEqual(alignment_status, 'alignment_status')
 
         self.charon_connector.charon_session.seqrun_get.return_value = {}
         with self.assertRaises(SampleLookupError):
-            alignment_status = self.charon_connector.seqrun_alignment_status(self.project_id, self.sample_id, self.libprep_id, 'seqrun_id')
+            alignment_status = self.charon_connector.seqrun_alignment_status(self.project_id,
+                                                                             self.sample_id,
+                                                                             self.libprep_id,
+                                                                             'seqrun_id')
 
 
 class TestTrackingConnector(unittest.TestCase):
