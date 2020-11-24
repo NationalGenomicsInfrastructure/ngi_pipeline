@@ -41,7 +41,6 @@ from ngi_pipeline.utils.filesystem import load_modules, execute_command_line, \
                                           match_files_under_dir
 from ngi_pipeline.utils.classes import with_ngi_config
 from ngi_pipeline.utils.filesystem import fastq_files_under_dir, is_index_file
-#from ngi_pipeline.utils.parsers import get_flowcell_id_from_dirtree
 from ngi_pipeline.utils.slurm import get_slurm_job_status
 
 LOG = minimal_logger(__name__)
