@@ -63,7 +63,7 @@ class NGIObject(object):
             len(self._subitems) == len(other._subitems),
             all(
                 map(
-                    lambda (s, o): s == o,
+                    lambda s_o: s_o[0] == s_o[1],
                     zip(
                         sorted(list(self), key=lambda x: x.name),
                         sorted(list(other), key=lambda x: x.name))))])
@@ -127,7 +127,7 @@ class NGISeqRun(NGIObject):
             len(self._subitems) == len(other._subitems),
             all(
                 map(
-                    lambda (s, o): s == o,
+                    lambda s_o1: s_o1[0] == s_o1[1],
                     zip(
                         sorted(list(self)),
                         sorted(list(other)))))])
