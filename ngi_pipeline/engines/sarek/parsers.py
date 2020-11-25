@@ -1,8 +1,6 @@
-
 import json
 import locale
 import re
-import string
 
 from ngi_pipeline.engines.sarek.exceptions import ParserException, ParserMetricNotFoundException
 
@@ -188,7 +186,7 @@ class QualiMapParser(ReportParser):
         # identify key = value assignments
         try:
             key, value = re.search(r'^\s+([^=]+)= (.+)$', line).groups()
-            key, value = map(string.strip, [key, value])
+            key, value = map(str.strip, [key, value])
             return {key: value}
         except AttributeError:
             # not an assignment
