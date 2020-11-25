@@ -88,7 +88,7 @@ def parse_xl_files(context):
         for xl_file in files_to_archive:
             try:
                 shutil.move(xl_file, XL_FILES_ARCHIVED)
-            except Exception, e:
+            except Exception as e:
                 log.error('Cannot move file {} to {}'.format(xl_file, XL_FILES_ARCHIVED))
                 log.error('Error says: {}'. format(str(e)))
             else:
@@ -568,7 +568,7 @@ def fetch_charon(context, project, threshold, all_samples):
                 # do not print 0%
                 if concordance != 0:
                     print '{} {}% {}'.format(sample, concordance, status)
-    except Exception, e:
+    except Exception as e:
         log.error("Can't fetch Charon. Error says: {}".format(str(e)))
 
 
