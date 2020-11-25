@@ -209,28 +209,6 @@ def parse_samplesheet(samplesheet_path):
               if all(map(lambda x: x is not None, row.values())) ] 
 
 
-def find_fastq_read_pairs_from_dir(directory):
-    """
-    Given the path to a directory, finds read pairs (based on _R1_/_R2_ file naming)
-    and returns a dict of {base_name: [ file_read_one, file_read_two ]}
-    Filters out files not ending with .fastq[.gz|.gzip|.bz2].
-
-    E.g. a path to a directory containing:
-        P567_102_AAAAAA_L001_R1_001.fastq.gz
-        P567_102_AAAAAA_L001_R2_001.fastq.gz
-    becomes
-        { "P567_102_AAAAAA_L001":
-           ["P567_102_AAAAAA_L001_R1_001.fastq.gz",
-            "P567_102_AAAAAA_L001_R2_001.fastq.gz"] }
-
-    :param str directory: The directory to search for fastq file pairs.
-    :returns: A dict of file_basename -> [file1, file2]
-    :rtype: dict
-    """
-    file_list = glob.glob(os.path.join(directory, "*"))
-    return find_fastq_read_pairs(file_list)
-
-
 def find_fastq_read_pairs(file_list):
     """
     Given a list of file names, finds read pairs (based on _R1_/_R2_ file naming)
@@ -288,74 +266,6 @@ def find_fastq_read_pairs(file_list):
                 matches_dict[file_basename_stripsuffix].append(os.abspath(file_pathname))
     return dict(matches_dict)
 
-def parse_lane_from_filename(sample_basename):
-    """Lane number is parsed from the standard filename format,
-     which is one of:
-       <sample-name>_<index>_<lane>_<read>_<group>.fastq.gz
-       e.g.
-       P567_102_AAAAAA_L001_R1_001.fastq.gz
-       (Standard Illumina format)
-    or
-       <lane_num>_<date>_<fcid>_<project>_<sample_num>_<read>.fastq[.gz]
-       e.g.
-       1_140220_AH8AMJADXX_P673_101_1.fastq.gz
-       (SciLifeLab Sthlm format, obsolete)
-
-    returns a lane as an int or raises a ValueError if there is no match
-    (which shouldn't generally happen and probably indicates a larger issue).
-
-    :param str sample_basename: The name of the file from which to pull the project id
-    :returns: (project_id, sample_id)
-    :rtype: tuple
-    :raises ValueError: If the ids cannot be determined from the filename (no regex match)
-    """
-    # Stockholm or \
-    # Illumina
-    match = re.match(r'(?P<lane>\d)_\d{6}_\w{10}_(?P<project>P\d{3})_(?P<sample>\d{3}).*', sample_basename) or \
-            re.match(r'.*_L\d{2}(?P<lane>\d{1}).*', sample_basename)
-            #re.match(r'(?P<project>P\d{3})_(?P<sample>\w+)_.*_L(?P<lane>\d{3})', sample_basename)
-
-    if match:
-        #return match.group('project'), match.group('sample'), match.group('lane')
-        return int(match.group('lane'))
-    else:
-        error_msg = ('Error: filename didn\'t match conventions, '
-                     'couldn\'t find lane number for sample '
-                     '"{}"'.format(sample_basename))
-        LOG.error(error_msg)
-        raise ValueError(error_msg)
-
-
-@memoized
-def get_flowcell_id_from_dirtree(path):
-    """Given the path to a file, tries to work out the flowcell ID.
-
-    Project directory structure is generally either:
-        <run_id>/Sample_<project-sample-id>/
-         131018_D00118_0121_BC2NANACXX/Sample_NA10860_NR/
-        (Uppsala format)
-    or:
-        <project>/<project-sample-id>/<libprep>/<date>_<flowcell>/
-        J.Doe_14_03/P673_101/140220_AH8AMJADXX/
-        (NGI format)
-    :param str path: The path to the file
-    :returns: The flowcell ID
-    :rtype: str
-    :raises ValueError: If the flowcell ID cannot be determined
-    """
-    flowcell_pattern = re.compile(r'\d{4,6}_(?P<fcid>[A-Z0-9]{10})')
-    try:
-        # NGI format (4-dir)
-        path, dirname = os.path.split(path)
-        return flowcell_pattern.match(dirname).groups()[0]
-    except (IndexError, AttributeError):
-        try:
-            # SciLifeLab Uppsala tree format (2-dir)
-            _, dirname = os.path.split(path)
-            return flowcell_pattern.match(dirname).groups()[0]
-        except (IndexError, AttributeError):
-            raise ValueError("Could not determine flowcell ID from directory path.")
-
 
 class XmlToList(list):
     def __init__(self, aList):
@@ -374,13 +284,6 @@ class XmlToList(list):
             else:
                 # Set dict for attributes
                 self.append({k:v for k,v in element.items()})
-
-
-# Sometimes you don't want to deal with a goddamn object you just want your goddamn XML dict
-def xmltodict_file(config_file):
-    tree = ET.parse(config_file)
-    root = tree.getroot()
-    return XmlToDict(root)
 
 
 # Generic XML to dict parsing

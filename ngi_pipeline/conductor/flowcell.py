@@ -15,8 +15,7 @@ from ngi_pipeline.database.communicate import get_project_id_from_name
 from ngi_pipeline.log.loggers import minimal_logger
 from ngi_pipeline.utils.classes import with_ngi_config
 from ngi_pipeline.utils.communication import mail_analysis
-from ngi_pipeline.utils.filesystem import do_rsync, do_symlink, \
-                                          locate_flowcell, safe_makedir
+from ngi_pipeline.utils.filesystem import do_symlink, locate_flowcell, safe_makedir
 from ngi_pipeline.utils.parsers import determine_library_prep_from_fcid, \
                                        get_sample_numbers_from_samplesheet
 

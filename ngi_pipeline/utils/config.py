@@ -13,33 +13,6 @@ def locate_ngi_config():
     return config_file_path
 
 
-def load_json_config(config_file_path):
-    """Load XML config file, expanding environmental variables.
-
-    :param str config_file_path: The path to the configuration file.
-
-    :returns: A dict of the parsed config file.
-    :rtype: dict
-    raises IOError: If the config file cannot be opened.
-    """
-    return load_generic_config(config_file_path, config_format="json")
-
-
-# This doesn't actually return the exact dict that would be used to write the XML file
-# because it wants to make my life more difficult
-def load_xml_config(config_file_path, xml_attribs=None):
-    """Load XML config file, expanding environmental variables.
-
-    :param str config_file_path: The path to the configuration file.
-    :param bool xml_attribs: Include/ignore XML attributes when constructing the dict.
-
-    :returns: A dict of the parsed config file.
-    :rtype: dict
-    :raises IOError: If the config file cannot be opened.
-    """
-    return load_generic_config(config_file_path, config_format="xml", xml_attribs=xml_attribs)
-
-
 def load_yaml_config(config_file_path):
     """Load YAML config file, expanding environmental variables.
 
@@ -94,15 +67,3 @@ def expand_path(path):
         return os.path.expandvars(path.replace("~", "$HOME"))
     except AttributeError:
         return path
-
-def lowercase_keys(dict, deepcopy=False):
-    """Return a (default shallow) copy of the dict passed in with all the keys in lowercase."""
-    ## TODO implement deep copy
-    dict_copy = {}
-    for key, value in dict.iteritems():
-        key = key.lower()
-        try:
-            dict_copy[key] = lowercase_keys(value)
-        except AttributeError:
-            dict_copy[key] = value
-    return dict_copy

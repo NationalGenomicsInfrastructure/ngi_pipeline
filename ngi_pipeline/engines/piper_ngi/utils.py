@@ -135,7 +135,7 @@ def remove_previous_sample_analyses(project_obj, sample_obj=None):
     """
     sample_files = find_previous_sample_analyses(project_obj, sample_obj=sample_obj, include_genotype_files=False)
     if sample_files:
-        LOG.info("Deleting files for samples {}".format(sample_obj or project.obj.samples))
+        LOG.info("Deleting files for samples {}".format(sample_obj or project_obj.samples))
         errors = []
         for sample_file in sample_files:
             LOG.info("Deleting file {}".format(sample_file))
