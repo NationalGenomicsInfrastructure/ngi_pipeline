@@ -290,7 +290,6 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
                                                      sample_name,
                                                      fc_full_id,
                                                      fq_file,
-                                                     libprep_name,
                                                      fallback_libprep))
                         else:
                             error_text = ('Project "{}" / sample "{}" / seqrun "{}" / fastq "{}" '

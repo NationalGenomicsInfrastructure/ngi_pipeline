@@ -63,7 +63,7 @@ def analyze(project, sample, quiet=False, config=None, config_file_path=None):
                 f.write("{}\n".format(slurm_job_id))
         except IOError as e:
             LOG.warning('Could not write slurm job id for project/sample '
-                     '{}/{} to file "{}" ({}). So... yup. Good luck bro!'.format(e))
+                     '{}/{} to file "{}" ({})'.format(project, sample, slurm_jobid_file, e))
 
 
 def queue_sbatch_file(sbatch_file_path):
@@ -107,7 +107,7 @@ def create_sbatch_file(cl_list, project, sample, config):
         slurm_project_id = config["environment"]["project_id"]
     except KeyError:
         raise RuntimeError('No SLURM project id specified in configuration file '
-                           'for job "{}"'.format(job_identifier))
+                           'for job "{}"'.format(job_label))
     slurm_queue = config.get("slurm", {}).get("queue") or "core"
     num_cores = config.get("slurm", {}).get("cores") or 16
     slurm_time = config.get("qc", {}).get("job_walltime", {}) or "1-00:00:00"

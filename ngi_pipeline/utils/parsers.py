@@ -9,6 +9,7 @@ import subprocess
 import time
 import xml.etree.cElementTree as ET
 import xml.parsers.expat
+import json
 
 from ngi_pipeline.database.classes import CharonSession, CharonError
 from ngi_pipeline.log.loggers import minimal_logger
@@ -263,7 +264,7 @@ def find_fastq_read_pairs(file_list):
                       "cannot be paired: \"{}\"".format(file_pathname))
                 # File could not be paired, set by itself (?)
                 file_basename_stripsuffix = suffix_pattern.split(file_basename)[0]
-                matches_dict[file_basename_stripsuffix].append(os.abspath(file_pathname))
+                matches_dict[file_basename_stripsuffix].append(os.path.abspath(file_pathname))
     return dict(matches_dict)
 
 
