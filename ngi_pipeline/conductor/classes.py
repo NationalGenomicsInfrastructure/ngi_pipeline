@@ -4,6 +4,7 @@ from ngi_pipeline.database.classes import CharonSession, CharonError
 from ngi_pipeline.log.loggers import minimal_logger
 from ngi_pipeline.utils.classes import with_ngi_config
 from ngi_pipeline.utils.charon import recurse_status_for_sample
+from six.moves import zip
 
 class NGIAnalysis(object):
     def __init__(self, project, restart_failed_jobs=None,

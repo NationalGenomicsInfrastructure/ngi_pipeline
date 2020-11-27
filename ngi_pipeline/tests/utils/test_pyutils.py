@@ -1,4 +1,5 @@
 from ngi_pipeline.utils.pyutils import flatten
+from six.moves import zip
 
 def test_flatten():
     nested_list = [['A', 'B'], 

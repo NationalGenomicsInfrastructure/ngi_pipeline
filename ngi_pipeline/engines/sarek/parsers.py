@@ -4,6 +4,7 @@ import re
 
 from ngi_pipeline.engines.sarek.exceptions import ParserException, ParserMetricNotFoundException
 from six.moves import map
+from six.moves import zip
 
 
 class ParserIntegrator(object):
@@ -287,7 +288,7 @@ class PicardMarkDuplicatesParser(ReportParser):
                 continue
             headers = fh.next().strip().split()
             self.data = {"metrics": [
-                dict(zip(headers, library)) for library in __parse_library_lines()]}
+                dict(list(zip(headers, library))) for library in __parse_library_lines()]}
 
     @staticmethod
     def _convert_to_unit(raw_value):
