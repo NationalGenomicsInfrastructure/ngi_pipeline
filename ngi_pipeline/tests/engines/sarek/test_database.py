@@ -113,32 +113,32 @@ class TestCharonConnector(unittest.TestCase):
         with self.assertRaises(AnalysisStatusForProcessStatusNotFoundError) as e:
             self.charon_connector.analysis_status_from_process_status(ProcessStopped)
 
-        expected_status = CharonConnector._ANALYSIS_STATUS_FROM_PROCESS_STATUS.values()
+        expected_status = list(CharonConnector._ANALYSIS_STATUS_FROM_PROCESS_STATUS.values())
         self.assertListEqual(
             expected_status,
             map(
                 lambda p: self.charon_connector.analysis_status_from_process_status(p),
-                CharonConnector._ANALYSIS_STATUS_FROM_PROCESS_STATUS.keys()))
+                list(CharonConnector._ANALYSIS_STATUS_FROM_PROCESS_STATUS.keys())))
 
     def test_alignment_status_from_analysis_status(self, charon_session_mock):
         self._get_charon_connector(charon_session_mock.return_value)
         with self.assertRaises(AlignmentStatusForAnalysisStatusNotFoundError) as e:
             self.charon_connector.alignment_status_from_analysis_status("this-status-does-not-exist")
 
-        expected_status = CharonConnector._ALIGNMENT_STATUS_FROM_ANALYSIS_STATUS.values()
+        expected_status = list(CharonConnector._ALIGNMENT_STATUS_FROM_ANALYSIS_STATUS.values())
         self.assertListEqual(
             expected_status,
             map(
                 lambda p: self.charon_connector.alignment_status_from_analysis_status(p),
-                CharonConnector._ALIGNMENT_STATUS_FROM_ANALYSIS_STATUS.keys()))
+                list(CharonConnector._ALIGNMENT_STATUS_FROM_ANALYSIS_STATUS.keys())))
 
     def _configure_sample_attribute_update(self, charon_session_mock):
         # set up some mocks
         self._get_charon_connector(charon_session_mock.return_value)
         self.charon_connector.charon_session.sample_get_libpreps.return_value = {"libpreps": self.libpreps}
         self.charon_connector.charon_session.libprep_get_seqruns.return_value = {"seqruns": self.seqruns}
-        expected_libpreps = self.libpreps[-1].values()
-        expected_seqruns = {lp.values()[0]: self.seqruns[1].values() for lp in self.libpreps}
+        expected_libpreps = list(self.libpreps[-1].values())
+        expected_seqruns = {list(lp.values())[0]: list(self.seqruns[1].values()) for lp in self.libpreps}
         return expected_libpreps, expected_seqruns
 
     def test_set_sample_analysis_status(self, charon_session_mock):
@@ -162,7 +162,7 @@ class TestCharonConnector(unittest.TestCase):
             self.project_id,
             self.sample_id,
             expected_libpreps[0],
-            expected_seqruns.values()[0][0],
+            list(expected_seqruns.values())[0][0],
             **seqrun_update_kwargs)
 
         # have exceptions raised
@@ -210,7 +210,7 @@ class TestCharonConnector(unittest.TestCase):
             update_args[0],
             update_args[1],
             expected_libpreps[0],
-            expected_seqruns.values()[0][0],
+            list(expected_seqruns.values())[0][0],
             **seqrun_update_kwargs)
 
         # exception encountered during sample update
@@ -284,7 +284,7 @@ class TestTrackingConnector(unittest.TestCase):
 
     def test_pidfield_from_process_connector_type(self):
         self.assertListEqual(
-            TrackingConnector.PIDFIELD_FROM_PROCESS_CONNECTOR_TYPE.values(),
+            list(TrackingConnector.PIDFIELD_FROM_PROCESS_CONNECTOR_TYPE.values()),
             map(
                 lambda c: TrackingConnector.pidfield_from_process_connector_type(c),
-                TrackingConnector.PIDFIELD_FROM_PROCESS_CONNECTOR_TYPE.keys()))
+                list(TrackingConnector.PIDFIELD_FROM_PROCESS_CONNECTOR_TYPE.keys())))

@@ -187,7 +187,7 @@ class AnalysisTracker(object):
             self.process_status,
             self.analysis_sample.projectid,
             self.analysis_sample.sampleid,
-            ",".join(libpreps_and_seqruns.keys()),
+            ",".join(list(libpreps_and_seqruns.keys())),
             ",".join(set([seqrun for seqruns in libpreps_and_seqruns.values() for seqrun in seqruns]))
         ))
         self.charon_connector.set_sample_analysis_status(
@@ -196,7 +196,7 @@ class AnalysisTracker(object):
             self.analysis_sample.projectid,
             self.analysis_sample.sampleid,
             recurse=True,
-            restrict_to_libpreps=libpreps_and_seqruns.keys(),
+            restrict_to_libpreps=list(libpreps_and_seqruns.keys()),
             restrict_to_seqruns=libpreps_and_seqruns)
 
     def report_analysis_results(self):

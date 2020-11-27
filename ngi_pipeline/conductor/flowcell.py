@@ -86,7 +86,7 @@ def organize_projects_from_flowcell(demux_fcid_dirs, restrict_to_projects=None,
                              "information.".format(",".join(demux_fcid_dirs_set)))
         raise RuntimeError(error_message)
     else:
-        projects_to_analyze = projects_to_analyze.values()
+        projects_to_analyze = list(projects_to_analyze.values())
     return projects_to_analyze
 
 

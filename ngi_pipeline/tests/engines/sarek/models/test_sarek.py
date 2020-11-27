@@ -231,7 +231,7 @@ class TestSarekAnalysis(unittest.TestCase):
             self.config,
             self.log,
             charon_connector=charon_connector_mock.return_value)
-        sample_obj = self.analysis_obj.project.samples.values()[0]
+        sample_obj = list(self.analysis_obj.project.samples.values())[0]
         analysis_sample = SarekAnalysisSample(self.analysis_obj.project, sample_obj, sarek_analysis)
         with mock.patch.object(sarek_analysis, "generate_tsv_file_contents") as tsv_mock, \
                 mock.patch.object(analysis_sample, "sample_analysis_tsv_file") as tsv_path_mock:
@@ -291,7 +291,7 @@ class TestSarekGermlineAnalysis(unittest.TestCase):
             self, process_connector_mock, tracking_connector_mock, charon_connector_mock, reference_genome_mock):
         sarek_analysis = self.get_instance(
             process_connector_mock, tracking_connector_mock, charon_connector_mock, reference_genome_mock)
-        sample_obj = self.analysis_obj.project.samples.values()[0]
+        sample_obj = list(self.analysis_obj.project.samples.values())[0]
         analysis_sample = SarekAnalysisSample(self.analysis_obj.project, sample_obj, sarek_analysis)
         self.config["outDir"] = analysis_sample.sample_analysis_path()
         self.config["input"] = analysis_sample.sample_analysis_tsv_file()
@@ -299,9 +299,9 @@ class TestSarekGermlineAnalysis(unittest.TestCase):
 
         self.assertIn("--tools {}".format(",".join(self.config["sarek"]["tools"])), observed_cmd)
         self.assertTrue(observed_cmd.startswith(self.config["nextflow"]["command"]))
-        for key in filter(lambda x: x not in ["command", "subcommand"], self.config["nextflow"].keys()):
+        for key in filter(lambda x: x not in ["command", "subcommand"], list(self.config["nextflow"].keys())):
             self.assertIn("-{} {}".format(key, self.config["nextflow"][key]), observed_cmd)
-        for key in filter(lambda x: x not in ["command", "tools"], self.config["sarek"].keys()):
+        for key in filter(lambda x: x not in ["command", "tools"], list(self.config["sarek"].keys())):
             self.assertIn("--{} {}".format(key, self.config["sarek"][key]), observed_cmd)
         self.assertNotIn("-command", observed_cmd)
         self.assertNotIn("-subcommand", observed_cmd)
@@ -311,7 +311,7 @@ class TestSarekGermlineAnalysis(unittest.TestCase):
             self, process_connector_mock, tracking_connector_mock, charon_connector_mock, reference_genome_mock):
         sarek_analysis = self.get_instance(
             process_connector_mock, tracking_connector_mock, charon_connector_mock, reference_genome_mock)
-        sample_obj = self.analysis_obj.project.samples.values()[0]
+        sample_obj = list(self.analysis_obj.project.samples.values())[0]
         analysis_sample = SarekAnalysisSample(self.analysis_obj.project, sample_obj, sarek_analysis)
         sample_data_path = analysis_sample.sample_data_path()
         with mock.patch.object(

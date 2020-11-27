@@ -528,7 +528,7 @@ def genotype_project(context, project, force):
         # print results
         if results:
             print 'Sample name % concordance'
-            for sample, concordance in sorted(results.items(), key=lambda s:s[0]):
+            for sample, concordance in sorted(list(results.items()), key=lambda s:s[0]):
                 print '{} {}'.format(sample, concordance)
         # print failed
         if failed:

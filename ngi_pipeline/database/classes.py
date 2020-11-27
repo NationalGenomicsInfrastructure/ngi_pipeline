@@ -197,7 +197,7 @@ class CharonSession(requests.Session):
                       genotype_status=None, runid=None, total_reads=None,
                       mean_autosomal_coverage=None, *args, **kwargs):
         if args: LOG.debug("Ignoring extra args: {}".format(", ".join(*args)))
-        if kwargs: LOG.debug("Ignoring extra kwargs: {}".format(", ".join(["{}: {}".format(k,v) for k,v in kwargs.iteritems()])))
+        if kwargs: LOG.debug("Ignoring extra kwargs: {}".format(", ".join(["{}: {}".format(k,v) for k,v in kwargs.items()])))
         url = self.construct_charon_url("seqrun", projectid, sampleid, libprepid, seqrunid)
         l_dict = locals()
         data = { k: str(l_dict.get(k)) for k in self._seqrun_params if l_dict.get(k)}

@@ -207,7 +207,7 @@ def parse_samplesheet(samplesheet_path):
     else:
         f.seek(0)
     return  [ row for row in csv.DictReader(f, dialect="excel", restval=None)
-              if all(map(lambda x: x is not None, row.values())) ] 
+              if all(map(lambda x: x is not None, list(row.values()))) ] 
 
 
 def find_fastq_read_pairs(file_list):
@@ -305,8 +305,8 @@ class XmlToDict(dict):
     And then use xmldict for what it is... a dict.
     '''
     def __init__(self, parent_element):
-        if parent_element.items():
-            self.update(dict(parent_element.items()))
+        if list(parent_element.items()):
+            self.update(dict(list(parent_element.items())))
         for element in parent_element:
             if element:
                 # treat like dict - we assume that if the first two tags
@@ -321,16 +321,16 @@ class XmlToDict(dict):
                     # the value is the list itself
                     aDict = {element[0].tag: XmlToList(element)}
                 # if the tag has attributes, add those to the dict
-                if element.items():
-                    aDict.update(dict(element.items()))
+                if list(element.items()):
+                    aDict.update(dict(list(element.items())))
                 self.update({element.tag: aDict})
             # this assumes that if you've got an attribute in a tag,
             # you won't be having any text. This may or may not be a
             # good idea -- time will tell. It works for the way we are
             # currently doing XML configuration files...
             ## additional note from years later, nobody ever comes back to look at old code and examine assumptions
-            elif element.items():
-                self.update({element.tag: dict(element.items())})
+            elif list(element.items()):
+                self.update({element.tag: dict(list(element.items()))})
                 # add the following line
                 self[element.tag].update({"__Content__":element.text})
 

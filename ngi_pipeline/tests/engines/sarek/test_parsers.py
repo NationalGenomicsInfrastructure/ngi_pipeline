@@ -115,7 +115,7 @@ class TestQualiMapParser(unittest.TestCase):
             self.assertDictEqual(
                 self.examples_expected[test_key][i],
                 test_fn(self.examples[test_key][i]) or dict())
-        for key in filter(lambda k: k != test_key, self.examples.keys()):
+        for key in filter(lambda k: k != test_key, list(self.examples.keys())):
             self.assertTrue(
                 all(map(
                     lambda l: test_fn(l) is None,

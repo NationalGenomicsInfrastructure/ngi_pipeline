@@ -315,7 +315,7 @@ def sbatch_piper_sample(command_line_list, workflow_name, project, sample,
                                        slurm_err_log=slurm_err_log)
     sbatch_text_list = sbatch_text.split("\n")
     sbatch_extra_params = config.get("slurm", {}).get("extra_params", {})
-    for param, value in sbatch_extra_params.iteritems():
+    for param, value in sbatch_extra_params.items():
         sbatch_text_list.append("#SBATCH {} {}\n\n".format(param, value))
     modules_to_load = config.get("piper", {}).get("load_modules", [])
     if modules_to_load:
