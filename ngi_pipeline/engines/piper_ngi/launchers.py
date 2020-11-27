@@ -162,7 +162,7 @@ def analyze(analysis_object, level='sample', config=None, config_file_path=None)
                                                            analysis_object.project, sample,
                                                            restart_finished_jobs=analysis_object.restart_finished_jobs,
                                                            files_to_copy=default_files_to_copy)
-                        for x in xrange(10):
+                        for x in range(10):
                             # Time delay to let sbatch get its act together
                             # (takes a few seconds to be visible with sacct)
                             try:

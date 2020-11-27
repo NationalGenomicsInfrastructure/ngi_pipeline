@@ -13,7 +13,7 @@ def generate_project_name():
     """
     return "{0}.{1}_{2}_{3}".format(
             random.choice(string.ascii_uppercase),
-            "".join([random.choice(string.ascii_lowercase) for i in xrange(6) ]).capitalize(),
+            "".join([random.choice(string.ascii_lowercase) for i in range(6) ]).capitalize(),
             random.randint(12,14),
             random.randint(11,99))
 
@@ -28,7 +28,7 @@ def generate_flowcell_id():
     """Generate a flowcell id in the format AABC123CXX
     """
     return "{0}{1}CXX".format(random.choice("AB"),
-            "".join([random.choice(string.ascii_uppercase + string.digits) for i in xrange(6)]))
+            "".join([random.choice(string.ascii_uppercase + string.digits) for i in range(6)]))
 
 
 def generate_instrument_id(prefix="SN"):
@@ -49,7 +49,7 @@ def generate_nucleotide_sequence(seq_length, alphabet="AGCT"):
     """
     if not alphabet:
         alphabet = "AGCT"
-    return "".join([ random.choice(alphabet) for i in xrange(seq_length) ])
+    return "".join([ random.choice(alphabet) for i in range(seq_length) ])
 
 
 def generate_sample_file_name(sample_name=None, barcode=None, lane=None, read_num=1):
