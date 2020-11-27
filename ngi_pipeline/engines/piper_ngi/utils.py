@@ -182,8 +182,7 @@ def find_previous_sample_analyses(project_obj, sample_obj=None, include_genotype
                                                    ".{}.*.fail".format(piper_sample_name))))
     # Include genotype files?
     if not include_genotype_files:
-        sample_files = filter(lambda x: not fnmatch.fnmatch(x, "*genotype_concordance*"),
-                              sample_files)
+        sample_files = [x for x in sample_files if not fnmatch.fnmatch(x, "*genotype_concordance*")]
 
     return sample_files
 

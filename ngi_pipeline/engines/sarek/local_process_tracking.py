@@ -105,7 +105,7 @@ class AnalysisTracker(object):
         # recreate a NGIProject object from the analysis
         project_obj = self.recreate_project_from_analysis(analysis_instance)
         # extract the sample object corresponding to the analysis entry
-        sample_obj = list(filter(lambda x: x.name == self.analysis_entry.sample_id, project_obj)).pop()
+        sample_obj = [x for x in project_obj if x.name == self.analysis_entry.sample_id].pop()
         self.analysis_sample = SarekAnalysisSample(project_obj, sample_obj, analysis_instance)
 
     def recreate_project_from_analysis(self, analysis_instance):

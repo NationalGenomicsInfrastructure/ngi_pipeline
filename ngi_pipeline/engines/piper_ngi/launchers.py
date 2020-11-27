@@ -251,7 +251,7 @@ def collect_files_for_sample_analysis(project_obj, sample_obj,
                           project_obj.project_id, project_obj.base_path)
     sample_obj = proj_obj.add_sample(sample_obj.name, sample_obj.dirname)
     # filter out index files from the analysis
-    for fastq_path in filter(lambda f: not is_index_file(f), fastq_files_on_filesystem):
+    for fastq_path in [f for f in fastq_files_on_filesystem if not is_index_file(f)]:
         base_path, fastq = os.path.split(fastq_path)
         if not fastq:
             base_path, fastq = os.path.split(base_path) # Handles trailing slash

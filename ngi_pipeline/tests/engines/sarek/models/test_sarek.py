@@ -299,9 +299,9 @@ class TestSarekGermlineAnalysis(unittest.TestCase):
 
         self.assertIn("--tools {}".format(",".join(self.config["sarek"]["tools"])), observed_cmd)
         self.assertTrue(observed_cmd.startswith(self.config["nextflow"]["command"]))
-        for key in filter(lambda x: x not in ["command", "subcommand"], list(self.config["nextflow"].keys())):
+        for key in [x for x in list(self.config["nextflow"].keys()) if x not in ["command", "subcommand"]]:
             self.assertIn("-{} {}".format(key, self.config["nextflow"][key]), observed_cmd)
-        for key in filter(lambda x: x not in ["command", "tools"], list(self.config["sarek"].keys())):
+        for key in [x for x in list(self.config["sarek"].keys()) if x not in ["command", "tools"]]:
             self.assertIn("--{} {}".format(key, self.config["sarek"][key]), observed_cmd)
         self.assertNotIn("-command", observed_cmd)
         self.assertNotIn("-subcommand", observed_cmd)

@@ -20,6 +20,7 @@ from ngi_pipeline.utils.classes import with_ngi_config
 
 from requests.exceptions import Timeout
 from six.moves import map
+from six.moves import filter
 
 
 LOG = minimal_logger(__name__)
@@ -268,7 +269,7 @@ def recreate_project_from_filesystem(project_dir,
     else:
         real_project_dir = os.path.abspath(project_dir)
         search_dir = os.path.join(os.path.dirname(project_dir), "*")
-        sym_files = filter(os.path.islink, glob.glob(search_dir))
+        sym_files = list(filter(os.path.islink, glob.glob(search_dir)))
         for sym_file in sym_files:
             if os.path.realpath(sym_file) == os.path.realpath(real_project_dir):
                 syml_project_dir = os.path.abspath(sym_file)
@@ -288,7 +289,7 @@ def recreate_project_from_filesystem(project_dir,
                              project_id=project_id,
                              base_path=project_base_path)
     samples_pattern = os.path.join(real_project_dir, "*")
-    samples = filter(os.path.isdir, glob.glob(samples_pattern))
+    samples = list(filter(os.path.isdir, glob.glob(samples_pattern)))
     if not samples:
         LOG.warning('No samples found for project "{}"'.format(project_obj))
     for sample_dir in samples:
@@ -301,7 +302,7 @@ def recreate_project_from_filesystem(project_dir,
         sample_obj = project_obj.add_sample(name=sample_name, dirname=sample_name)
 
         libpreps_pattern = os.path.join(sample_dir, "*")
-        libpreps = filter(os.path.isdir, glob.glob(libpreps_pattern))
+        libpreps = list(filter(os.path.isdir, glob.glob(libpreps_pattern)))
         if not libpreps:
             LOG.warning('No libpreps found for sample "{}"'.format(sample_obj))
         for libprep_dir in libpreps:
@@ -315,7 +316,7 @@ def recreate_project_from_filesystem(project_dir,
                                                  dirname=libprep_name)
 
             seqruns_pattern = os.path.join(libprep_dir, "*_*_*_*")
-            seqruns = filter(os.path.isdir, glob.glob(seqruns_pattern))
+            seqruns = list(filter(os.path.isdir, glob.glob(seqruns_pattern)))
             if not seqruns:
                 LOG.warning('No seqruns found for libprep "{}"'.format(libprep_obj))
             for seqrun_dir in seqruns:
@@ -380,7 +381,7 @@ def match_files_under_dir(dirname, pattern, pt_style="regex", realpath=True):
                 else:
                     matches.append(os.path.abspath(file_path))
         else: # regex-style
-            file_matches = filter(pt_comp.search, filenames)
+            file_matches = list(filter(pt_comp.search, filenames))
             file_paths = [os.path.join(root, filename) for filename in file_matches]
             if file_paths:
                 if realpath:

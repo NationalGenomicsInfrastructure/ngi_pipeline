@@ -102,7 +102,7 @@ class MultiQCParser(ReportParser):
         pass
 
     def total_sequenced_reads(self):
-        source = list(filter(lambda s: s.endswith(".real"), self.data_source("Samtools", "stats"))).pop()
+        source = [s for s in self.data_source("Samtools", "stats") if s.endswith(".real")].pop()
         source_data = self.multiqc_samtools_stats()[source]
         return source_data["raw_total_sequences"]
 
@@ -314,7 +314,9 @@ class PicardMarkDuplicatesParser(ReportParser):
         to return the average across all libraries
         :return: The percent of duplication as a float
         """
-        libraries = filter(lambda l: library is None or l["LIBRARY"] == library, self.data.get("metrics", []))
+        libraries = [l for l in self.data.get("metrics", []) 
+                     if library is None 
+                     or l["LIBRARY"] == library]
         total_reads = \
             sum([lib["UNPAIRED_READS_EXAMINED"] for lib in libraries]) + \
             2*sum([lib["READ_PAIRS_EXAMINED"] for lib in libraries])

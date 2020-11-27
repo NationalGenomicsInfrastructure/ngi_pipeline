@@ -64,7 +64,7 @@ class TestSarekWorkflowStep(unittest.TestCase):
         observed_command_line = self.sarek_workflow_step.command_line()
         self.assertIn("--tools", observed_command_line)
         self.assertIn(",".join(valid_tools), observed_command_line)
-        for key in filter(lambda x: x not in ["tools", "command"], list(self.sarek_args.keys())):
+        for key in [x for x in list(self.sarek_args.keys()) if x not in ["tools", "command"]]:
             self.assertIn("-{} {}".format(key, self.sarek_args[key]), observed_command_line)
 
 

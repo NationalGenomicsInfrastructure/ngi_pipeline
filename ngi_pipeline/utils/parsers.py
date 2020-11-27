@@ -14,6 +14,7 @@ import json
 from ngi_pipeline.database.classes import CharonSession, CharonError
 from ngi_pipeline.log.loggers import minimal_logger
 from ngi_pipeline.utils.classes import memoized
+from six.moves import filter
 
 LOG = minimal_logger(__name__)
 
@@ -109,9 +110,9 @@ def _get_and_trim_field_value(row_dict, fieldnames, trim_away_string=""):
     :return: the value of the first key-value pair matched or None if no matching key could be found
     """
     try:
-        return filter(
+        return list(filter(
             lambda v: v is not None,
-            [row_dict.get(k) for k in fieldnames])[0].replace(trim_away_string, "")
+            [row_dict.get(k) for k in fieldnames]))[0].replace(trim_away_string, "")
     except IndexError:
         return None
 
@@ -125,9 +126,9 @@ def _get_libprepid_from_description(description):
     """
     # parameters are delimited with ';', values are indicated with ':'
     try:
-        return filter(
+        return list(filter(
             lambda param: param.startswith("LIBRARY_NAME:"),
-            description.split(";"))[0].split(":")[1]
+            description.split(";")))[0].split(":")[1]
     except IndexError:
         return None
 
@@ -155,11 +156,10 @@ def get_sample_numbers_from_samplesheet(samplesheet_path):
         ss_sample_name = _get_and_trim_field_value(row, ["SampleName", "Sample_Name"], "Sample_")
         ss_sample_id = _get_and_trim_field_value(row, ["SampleID", "Sample_ID"], "Sample_")
         ss_barcode = "-".join(
-            filter(
-                lambda x: x is not None,
-                [
-                    _get_and_trim_field_value(row, ["index"]),
-                    _get_and_trim_field_value(row, ["index2"])]))
+            [x for x in [_get_and_trim_field_value(row, ["index"]),
+                         _get_and_trim_field_value(row, ["index2"])] 
+             if x is not None]
+            )
         ss_lane_num = int(_get_and_trim_field_value(row, ["Lane"]))
         ss_libprepid = _get_libprepid_from_description(
             _get_and_trim_field_value(row, ["Description"]))
@@ -228,7 +228,7 @@ def find_fastq_read_pairs(file_list):
     """
     # We only want fastq files
     pt = re.compile(".*\.(fastq|fq)(\.gz|\.gzip|\.bz2)?$")
-    file_list = filter(pt.match, file_list)
+    file_list = list(filter(pt.match, file_list))
     if not file_list:
         # No files found
         LOG.warning("No fastq files found.")
@@ -370,7 +370,7 @@ class RunMetricsParser(dict):
             return re.search(pattern, f) != None
         if not filter_fn:
             filter_fn = filter_function
-        return filter(filter_fn, self.files)
+        return list(filter(filter_fn, self.files))
 
     def parse_json_files(self, filter_fn=None):
         """Parse json files and return the corresponding dicts
