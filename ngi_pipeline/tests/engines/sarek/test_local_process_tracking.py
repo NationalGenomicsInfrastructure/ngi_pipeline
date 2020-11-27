@@ -77,16 +77,16 @@ class TestAnalysisTracker(unittest.TestCase):
             for libprep_obj in sample_obj:
                 for seqrun_obj in libprep_obj:
                     fastq_files.extend(
-                        map(
-                            lambda f: os.path.join(
-                                self.project_obj.base_path,
-                                "DATA",
-                                self.project_obj.dirname,
-                                sample_obj.dirname,
-                                libprep_obj.dirname,
-                                seqrun_obj.dirname,
-                                f),
-                            seqrun_obj.fastq_files))
+                        [os.path.join(
+                            self.project_obj.base_path,
+                            "DATA",
+                            self.project_obj.dirname,
+                            sample_obj.dirname,
+                            libprep_obj.dirname,
+                            seqrun_obj.dirname,
+                            f)
+                         for f in seqrun_obj.fastq_files]
+                        )
         observed_project_obj = AnalysisTracker._project_from_fastq_file_paths(fastq_files)
         self.assertEqual(self.project_obj, observed_project_obj)
 

@@ -19,6 +19,7 @@ from ngi_pipeline.log.loggers import minimal_logger
 from ngi_pipeline.utils.classes import with_ngi_config
 
 from requests.exceptions import Timeout
+from six.moves import map
 
 
 LOG = minimal_logger(__name__)
@@ -383,7 +384,7 @@ def match_files_under_dir(dirname, pattern, pt_style="regex", realpath=True):
             file_paths = [os.path.join(root, filename) for filename in file_matches]
             if file_paths:
                 if realpath:
-                    matches.extend(map(os.path.realpath, file_paths))
+                    matches.extend(list(map(os.path.realpath, file_paths)))
                 else:
-                    matches.extend(map(os.path.abspath, file_paths))
+                    matches.extend(list(map(os.path.abspath, file_paths)))
     return matches

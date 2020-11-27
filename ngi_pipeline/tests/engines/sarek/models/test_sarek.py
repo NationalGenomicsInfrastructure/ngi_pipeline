@@ -327,7 +327,7 @@ class TestSarekGermlineAnalysis(unittest.TestCase):
             libprep_mock.return_value = True
             seqrun_mock.return_value = True
             expected_tsv = []
-            for libprepid in map(lambda lp: '{}-{}'.format(sample_obj.name, lp), ['libprep1', 'libprep2']):
+            for libprepid in ['{}-{}'.format(sample_obj.name, lp) for lp in ['libprep1', 'libprep2']]:
                 for sample_index in ['1', '2']:
                     tsv_row = [sample_obj.name, 'ZZ', 0, sample_obj.name, 'ABC00{0}CXY.1.S{0}'.format(sample_index)]
                     tsv_row.extend([

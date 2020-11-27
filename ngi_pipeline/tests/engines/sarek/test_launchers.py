@@ -4,6 +4,7 @@ import unittest
 
 from ngi_pipeline.conductor.classes import NGIAnalysis, NGIProject
 from ngi_pipeline.log.loggers import minimal_logger
+from six.moves import map
 
 
 class TestLaunchers(unittest.TestCase):

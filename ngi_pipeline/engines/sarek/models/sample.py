@@ -82,7 +82,7 @@ class SarekAnalysisSample(object):
         """
         :return: a list of the libprep ids associated with the sample (based on the NGISample object)
         """
-        return list(map(lambda x: x.name, self.sample_ngi_object))
+        return [x.name for x in self.sample_ngi_object]
 
     def libprep_seqrun_ids(self, libprepid):
         """
@@ -90,7 +90,7 @@ class SarekAnalysisSample(object):
         :return: a list of the seqrun ids associated with the sample and specified libprep id
         (based on the NGISample object)
         """
-        return list(map(lambda x: x.name, self._get_sample_librep(libprepid)))
+        return [x.name for x in self._get_sample_librep(libprepid)]
 
     def libpreps_to_analyze(self):
         """
@@ -158,13 +158,11 @@ class SarekAnalysisSample(object):
         # the runfolder is represented with a Runfolder object
         runfolder = Runfolder(self.sample_seqrun_path(libprepid, seqrun.name))
         # iterate over the fastq file pairs belonging to the seqrun, filter out files with index reads
-        sample_fastq_objects = map(
-            lambda f: SampleFastq(os.path.join(runfolder.path, f)),
-            filter(lambda fq: not is_index_file(fq), seqrun.fastq_files))
+        sample_fastq_objects = [SampleFastq(os.path.join(runfolder.path, f)) for f in filter(lambda fq: not is_index_file(fq), seqrun.fastq_files)]
         for sample_fastq_file_pair in SampleFastq.sample_fastq_file_pair(sample_fastq_objects):
             runid = "{}.{}.{}".format(
                 runfolder.flowcell_id, sample_fastq_file_pair[0].lane_number, sample_fastq_file_pair[0].sample_number)
-            yield [runid] + map(lambda x: x.path, sample_fastq_file_pair)
+            yield [runid] + [x.path for x in sample_fastq_file_pair]
 
     def runid_and_fastq_files_from_csv(self):
         """

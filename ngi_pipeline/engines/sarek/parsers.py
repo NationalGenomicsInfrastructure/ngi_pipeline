@@ -3,6 +3,7 @@ import locale
 import re
 
 from ngi_pipeline.engines.sarek.exceptions import ParserException, ParserMetricNotFoundException
+from six.moves import map
 
 
 class ParserIntegrator(object):
@@ -186,7 +187,7 @@ class QualiMapParser(ReportParser):
         # identify key = value assignments
         try:
             key, value = re.search(r'^\s+([^=]+)= (.+)$', line).groups()
-            key, value = map(str.strip, [key, value])
+            key, value = list(map(str.strip, [key, value]))
             return {key: value}
         except AttributeError:
             # not an assignment
@@ -275,9 +276,9 @@ class PicardMarkDuplicatesParser(ReportParser):
             local_line = fh.next().strip()
             while len(local_line) > 0 and not local_line.startswith("##"):
                 local_libraries.append(
-                    map(
+                    list(map(
                         self._convert_to_unit,
-                        local_line.split()))
+                        local_line.split())))
                 local_line = fh.next().strip()
             return local_libraries
 

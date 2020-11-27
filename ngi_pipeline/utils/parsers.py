@@ -111,9 +111,7 @@ def _get_and_trim_field_value(row_dict, fieldnames, trim_away_string=""):
     try:
         return filter(
             lambda v: v is not None,
-            map(
-                lambda k: row_dict.get(k),
-                fieldnames))[0].replace(trim_away_string, "")
+            [row_dict.get(k) for k in fieldnames])[0].replace(trim_away_string, "")
     except IndexError:
         return None
 
@@ -207,7 +205,7 @@ def parse_samplesheet(samplesheet_path):
     else:
         f.seek(0)
     return  [ row for row in csv.DictReader(f, dialect="excel", restval=None)
-              if all(map(lambda x: x is not None, list(row.values()))) ] 
+              if all([x is not None for x in list(row.values())]) ] 
 
 
 def find_fastq_read_pairs(file_list):

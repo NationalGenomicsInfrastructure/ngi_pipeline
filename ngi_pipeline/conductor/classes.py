@@ -62,11 +62,9 @@ class NGIObject(object):
             self._subitem_type == other._subitem_type,
             len(self._subitems) == len(other._subitems),
             all(
-                map(
-                    lambda s_o: s_o[0] == s_o[1],
-                    zip(
+                [s_o[0] == s_o[1] for s_o in zip(
                         sorted(list(self), key=lambda x: x.name),
-                        sorted(list(other), key=lambda x: x.name))))])
+                        sorted(list(other), key=lambda x: x.name))])])
 
     def __iter__(self):
         return iter(self._subitems.values())
@@ -126,11 +124,9 @@ class NGISeqRun(NGIObject):
             self.dirname == other.dirname,
             len(self._subitems) == len(other._subitems),
             all(
-                map(
-                    lambda s_o1: s_o1[0] == s_o1[1],
-                    zip(
+                [s_o1[0] == s_o1[1] for s_o1 in zip(
                         sorted(list(self)),
-                        sorted(list(other)))))])
+                        sorted(list(other)))])])
 
     def __iter__(self):
         return iter(self._subitems)

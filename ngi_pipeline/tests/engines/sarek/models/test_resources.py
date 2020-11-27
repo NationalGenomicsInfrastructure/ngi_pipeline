@@ -3,6 +3,7 @@ import unittest
 
 from ngi_pipeline.engines.sarek.exceptions import ReferenceGenomeNotRecognized
 from ngi_pipeline.engines.sarek.models.resources import ReferenceGenome, Runfolder, SampleFastq
+from six.moves import map
 
 
 class TestReferenceGenome(unittest.TestCase):
@@ -81,13 +82,13 @@ class TestSampleFastq(unittest.TestCase):
             n += 1
 
     def test__sample_fastq_file_pair_single_read(self, *args):
-        sample_fastq_files = map(SampleFastq, [
+        sample_fastq_files = list(map(SampleFastq, [
             "sample_A_S1_L001_R1_001.fastq.gz",
             "sample_A_S1_L002_R1_001.fastq.gz",
             "sample_A_S2_L001_R1_001.fastq.gz",
             "sample_A_S2_L005_R1_001.fastq.gz",
             "sample_B_S3_L002_R1_001.fastq.gz"
-        ])
+            ]))
         n = 0
         for fastq_pair in SampleFastq.sample_fastq_file_pair(sample_fastq_files):
             self.assertEqual(1, len(fastq_pair))

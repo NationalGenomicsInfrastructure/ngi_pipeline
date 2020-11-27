@@ -117,9 +117,7 @@ class TestQualiMapParser(unittest.TestCase):
                 test_fn(self.examples[test_key][i]) or dict())
         for key in filter(lambda k: k != test_key, list(self.examples.keys())):
             self.assertTrue(
-                all(map(
-                    lambda l: test_fn(l) is None,
-                    self.examples[key])))
+                all([test_fn(l) is None for l in self.examples[key]]))
 
     def test___parse_numeric_assignment(self):
         test_key = "numeric_assignment"

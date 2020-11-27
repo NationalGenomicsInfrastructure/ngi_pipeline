@@ -516,7 +516,7 @@ class SarekGermlineAnalysis(SarekAnalysis):
         # each analysis step is represented by a SarekWorkflowStep instance
         # create the command line by chaining the command lines from each processing step
         return " ".join(
-            map(lambda step: step.command_line(), self.processing_steps(analysis_sample)))
+            [step.command_line() for step in self.processing_steps(analysis_sample)])
 
     def generate_tsv_file_contents(self, analysis_sample):
         """

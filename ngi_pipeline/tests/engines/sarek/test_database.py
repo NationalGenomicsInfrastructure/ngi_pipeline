@@ -75,11 +75,11 @@ class TestCharonConnector(unittest.TestCase):
         # filtering for existing elements should return only those
         self.assertListEqual(
             expected_list[0:2],
-            test_fn(*test_args, restrict_to=map(lambda x: x[element_key], expected_list[0:2])))
+            test_fn(*test_args, restrict_to=[x[element_key] for x in expected_list[0:2]]))
 
         self.assertListEqual(
             expected_list[0:1],
-            test_fn(*test_args, restrict_to=map(lambda x: x[element_key], expected_list[0:1])))
+            test_fn(*test_args, restrict_to=[x[element_key] for x in expected_list[0:1]]))
 
     def test_sample_libpreps(self, charon_session_mock):
         self._get_charon_connector(charon_session_mock.return_value)
@@ -116,9 +116,8 @@ class TestCharonConnector(unittest.TestCase):
         expected_status = list(CharonConnector._ANALYSIS_STATUS_FROM_PROCESS_STATUS.values())
         self.assertListEqual(
             expected_status,
-            map(
-                lambda p: self.charon_connector.analysis_status_from_process_status(p),
-                list(CharonConnector._ANALYSIS_STATUS_FROM_PROCESS_STATUS.keys())))
+            [self.charon_connector.analysis_status_from_process_status(p) 
+             for p in list(CharonConnector._ANALYSIS_STATUS_FROM_PROCESS_STATUS.keys())])
 
     def test_alignment_status_from_analysis_status(self, charon_session_mock):
         self._get_charon_connector(charon_session_mock.return_value)
@@ -128,9 +127,8 @@ class TestCharonConnector(unittest.TestCase):
         expected_status = list(CharonConnector._ALIGNMENT_STATUS_FROM_ANALYSIS_STATUS.values())
         self.assertListEqual(
             expected_status,
-            map(
-                lambda p: self.charon_connector.alignment_status_from_analysis_status(p),
-                list(CharonConnector._ALIGNMENT_STATUS_FROM_ANALYSIS_STATUS.keys())))
+            [self.charon_connector.alignment_status_from_analysis_status(p) 
+             for p in list(CharonConnector._ALIGNMENT_STATUS_FROM_ANALYSIS_STATUS.keys())])
 
     def _configure_sample_attribute_update(self, charon_session_mock):
         # set up some mocks
@@ -285,6 +283,5 @@ class TestTrackingConnector(unittest.TestCase):
     def test_pidfield_from_process_connector_type(self):
         self.assertListEqual(
             list(TrackingConnector.PIDFIELD_FROM_PROCESS_CONNECTOR_TYPE.values()),
-            map(
-                lambda c: TrackingConnector.pidfield_from_process_connector_type(c),
-                list(TrackingConnector.PIDFIELD_FROM_PROCESS_CONNECTOR_TYPE.keys())))
+            [TrackingConnector.pidfield_from_process_connector_type(c) 
+             for c in list(TrackingConnector.PIDFIELD_FROM_PROCESS_CONNECTOR_TYPE.keys())])
