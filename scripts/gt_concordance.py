@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import sys
 import os
 import re
@@ -241,8 +242,8 @@ def genotype_sample(context, sample, force):
             if error:
                 log.error('Sample has not been updated in Charon: {}'.format(sample))
                 log.error('Error says: {}'.format(error))
-            print 'Sample name\t % concordance'
-            print '{}:\t {}'.format(sample, concordance)
+            print('Sample name\t % concordance')
+            print('{}:\t {}'.format(sample, concordance))
 
 @click.pass_context
 def run_genotype_sample(context, sample, force=None):
@@ -527,14 +528,14 @@ def genotype_project(context, project, force):
 
         # print results
         if results:
-            print 'Sample name % concordance'
+            print('Sample name % concordance')
             for sample, concordance in sorted(list(results.items()), key=lambda s:s[0]):
-                print '{} {}'.format(sample, concordance)
+                print('{} {}'.format(sample, concordance))
         # print failed
         if failed:
-            print 'Failed to check concordance for samples: '
+            print('Failed to check concordance for samples: ')
             for sample in failed:
-                print sample
+                print(sample)
 
 @cli.command()
 @click.argument('project')
@@ -560,14 +561,14 @@ def fetch_charon(context, project, threshold, all_samples):
 
         # print output
         if not all_samples and samples:
-            print 'Samples below threshold: {}%'.format(threshold)
+            print('Samples below threshold: {}%'.format(threshold))
         for sample in sorted(samples.keys()):
             concordance, status = samples[sample]
             # if --all, we don't care about threshold
             if all_samples or concordance <= threshold:
                 # do not print 0%
                 if concordance != 0:
-                    print '{} {}% {}'.format(sample, concordance, status)
+                    print('{} {}% {}'.format(sample, concordance, status))
     except Exception as e:
         log.error("Can't fetch Charon. Error says: {}".format(str(e)))
 
