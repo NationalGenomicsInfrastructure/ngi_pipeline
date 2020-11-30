@@ -9,6 +9,7 @@ import requests
 from ngi_pipeline.database.utils import load_charon_variables
 from ngi_pipeline.log.loggers import minimal_logger
 from requests.exceptions import Timeout
+import six
 
 LOG = minimal_logger(__name__)
 
@@ -20,10 +21,8 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-class CharonSession(requests.Session):
-    # Yeah that's right, I'm using __metaclass__
-    # I even looked up how to do it on StackOverflow all by myself
-    __metaclass__ = Singleton
+class CharonSession(six.with_metaclass(Singleton, requests.Session)):
+    
     def __init__(self, config=None, config_file_path=None):
         super(CharonSession, self).__init__()
 
