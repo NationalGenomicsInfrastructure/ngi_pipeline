@@ -401,7 +401,7 @@ class RunMetricsParser(dict):
         return dicts
 
 
-class RunInfoParser():
+class RunInfoParser(object):
     """RunInfo parser"""
     def __init__(self):
         self._data = {}
@@ -439,7 +439,7 @@ class RunInfoParser():
         p.ParseFile(fp)
 
 
-class RunParametersParser():
+class RunParametersParser(object):
     """runParameters.xml parser"""
     def __init__(self):
         self.data = {}
