@@ -50,7 +50,7 @@ def load_modules(modules_list, config=None, config_file_path=None):
         stdout,stderr = p.communicate()
         try:
             assert(stdout), stderr
-            exec stdout
+            exec(stdout)
         except Exception as e:
             error_msg = "Error loading module {}: {}".format(module, e)
             error_msgs.append(error_msg)
