@@ -19,6 +19,7 @@ from ngi_pipeline.database.filesystem import create_charon_entries_from_project
 from ngi_pipeline.engines import qc_ngi
 from ngi_pipeline.log.loggers import minimal_logger
 from ngi_pipeline.utils.filesystem import locate_project, recreate_project_from_filesystem
+from six.moves import input
 
 LOG = minimal_logger(os.path.basename(__file__))
 inflector = inflect.engine()
@@ -37,7 +38,7 @@ def validate_dangerous_user_thing(action=("do SOMETHING that Mario thinks you "
     while not return_value:
         if attempts < 3:
             attempts += 1
-            user_input = raw_input("Confirm by typing 'yes' or 'no' "
+            user_input = input("Confirm by typing 'yes' or 'no' "
                                    "({}): ".format(attempts)).lower()
             if user_input not in ('yes', 'no'):
                 continue
