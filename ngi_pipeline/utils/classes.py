@@ -20,7 +20,7 @@ class with_ngi_config(object):
         # Assign positional args to relevant parameters
         # An alternative way to do this is with inspect.getargspec(self.f)
         # instead of self.f.func_code.co_varnames, but it's an additional import
-        kwargs.update(dict(list(zip(self.f.func_code.co_varnames, args))))
+        kwargs.update(dict(list(zip(self.f.__code__.co_varnames, args))))
         if not kwargs.get("config"):
             if not kwargs.get("config_file_path"):
                 kwargs["config_file_path"] = locate_ngi_config()
