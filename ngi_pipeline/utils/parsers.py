@@ -184,12 +184,12 @@ def parse_samplesheet(samplesheet_path):
     """
     try:
         # try opening as a gzip file (Uppsala)
-        f = gzip.open(samplesheet_path, 'rbU')
+        f = gzip.open(samplesheet_path)
         f.readline()
         f.seek(0)
     except IOError: # I would be more comfortable if this had an error code attr. Just sayin'.
         # Not gzipped
-        f = open(samplesheet_path, 'rbU')
+        f = open(samplesheet_path)
 
     # Two possible formats: simple csv and not simple weird INI/csv format
     # Okay this looks kind of bad and will probably break easily, but if you want

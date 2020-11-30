@@ -85,7 +85,7 @@ class TestFilesystemUtils(unittest.TestCase):
     def test_execute_command_line(self):
         cl = 'hostname'
         popen_object = execute_command_line(cl, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        reported_hostname = popen_object.communicate()[0].strip()
+        reported_hostname = popen_object.communicate()[0].decode("utf-8").strip()
         assert(reported_hostname == socket.gethostname())
 
     def test_execute_command_line_RuntimeError(self):
