@@ -274,19 +274,19 @@ class PicardMarkDuplicatesParser(ReportParser):
 
         def __parse_library_lines():
             local_libraries = []
-            local_line = fh.next().strip()
+            local_line = next(fh).strip()
             while len(local_line) > 0 and not local_line.startswith("##"):
                 local_libraries.append(
                     list(map(
                         self._convert_to_unit,
                         local_line.split())))
-                local_line = fh.next().strip()
+                local_line = next(fh).strip()
             return local_libraries
 
         for line in fh:
             if line is None or not line.strip().startswith("## METRICS CLASS"):
                 continue
-            headers = fh.next().strip().split()
+            headers = next(fh).strip().split()
             self.data = {"metrics": [
                 dict(list(zip(headers, library))) for library in __parse_library_lines()]}
 

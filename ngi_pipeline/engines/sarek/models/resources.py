@@ -121,10 +121,10 @@ class ReferenceGenome(object):
         :return: a ReferenceGenome instance
         """
         try:
-            return filter(
+            return list(filter(
                 lambda ref: str(ref).lower() == genome_name.lower(),
                 (GRCh37(), GRCh38())
-            )[0]
+                ))[0]
         except IndexError:
             raise ReferenceGenomeNotRecognized(genome_name)
 
