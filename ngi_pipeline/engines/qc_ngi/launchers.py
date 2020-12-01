@@ -73,10 +73,10 @@ def queue_sbatch_file(sbatch_file_path):
                                     stderr=subprocess.PIPE)
     p_out, p_err = p_handle.communicate()
     try:
-        slurm_job_id = re.match(r'Submitted batch job (\d+)', p_out).groups()[0]
+        slurm_job_id = re.match(r'Submitted batch job (\d+)', p_out.decode("utf-8")).groups()[0]
     except AttributeError:
         raise RuntimeError('Could not submit sbatch file "{}": '
-                           '{}'.format(sbatch_file_path, p_err))
+                           '{}'.format(sbatch_file_path, p_err.decode("utf-8")))
     return int(slurm_job_id)
 
 
