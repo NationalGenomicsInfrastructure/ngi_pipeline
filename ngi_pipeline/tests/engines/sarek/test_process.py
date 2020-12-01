@@ -91,17 +91,17 @@ class TestProcessExitStatus(unittest.TestCase):
         os.unlink(exit_code_path)
 
     def test_get_exit_code_nonsense_file(self):
-        exit_code_path = TestProcessExitStatus._create_temp_file_with_contents(contents="nonsense-contents")
+        exit_code_path = TestProcessExitStatus._create_temp_file_with_contents(contents=b"nonsense-contents")
         self.assertIsNone(ProcessExitStatus.get_exit_code(exit_code_path))
         os.unlink(exit_code_path)
 
     def test_get_exit_code_0(self):
-        exit_code_path = TestProcessExitStatus._create_temp_file_with_contents(contents="0")
+        exit_code_path = TestProcessExitStatus._create_temp_file_with_contents(contents=b"0")
         self.assertEquals(0, ProcessExitStatus.get_exit_code(exit_code_path))
         os.unlink(exit_code_path)
 
     def test_get_exit_code_1(self):
-        exit_code_path = TestProcessExitStatus._create_temp_file_with_contents(contents="1")
+        exit_code_path = TestProcessExitStatus._create_temp_file_with_contents(contents=b"1")
         self.assertEquals(1, ProcessExitStatus.get_exit_code(exit_code_path))
         os.unlink(exit_code_path)
 
