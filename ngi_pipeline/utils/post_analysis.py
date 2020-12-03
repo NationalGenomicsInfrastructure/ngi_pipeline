@@ -18,7 +18,7 @@ def run_multiqc(base_path, project_id, project_name, wait=False):
         if wait:
             (multiqc_stdout, multiqc_stderr)=handle.communicate()
             if multiqc_stdout or multiqc_stderr:
-                combined_output="{}\n{}".format(multiqc_stdout.decode("utf-8"), multiqc_stderr.decode("utf-8"))
+                combined_output="{}\n{}".format(multiqc_stdout, multiqc_stderr)
                 raise Exception(combined_output)
 
     except:

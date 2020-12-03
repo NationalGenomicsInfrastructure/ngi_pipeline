@@ -159,7 +159,8 @@ def execute_command_line(cl, shell=False, stdout=None, stderr=None, cwd=None):
         p_handle = subprocess.Popen(cl, stdout=stdout,
                                         stderr=stderr,
                                         cwd=cwd,
-                                        shell=shell)
+                                        shell=shell,
+                                        universal_newlines=True)
         error_msg = None
     except OSError:
         error_msg = ("Cannot execute command; missing executable on the path? "

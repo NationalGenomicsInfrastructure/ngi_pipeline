@@ -299,11 +299,11 @@ class SlurmConnector(ProcessConnector):
             stdout, stderr = proc.communicate()
             try:
                 # parse the slurm job id from the sbatch stdout
-                slurm_job_id = re.match(r'Submitted batch job (\d+)', stdout.decode("utf-8")).groups()[0]
+                slurm_job_id = re.match(r'Submitted batch job (\d+)', stdout).groups()[0]
                 return slurm_job_id
             except AttributeError:
                 raise RuntimeError(
-                    'Could not submit sbatch job for workflow "{}": {}'.format(job_name, stderr.decode("utf-8")))
+                    'Could not submit sbatch job for workflow "{}": {}'.format(job_name, stderr))
 
     @staticmethod
     def get_slurm_job_status(slurm_job_id):

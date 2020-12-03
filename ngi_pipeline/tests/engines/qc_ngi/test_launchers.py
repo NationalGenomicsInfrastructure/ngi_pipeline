@@ -42,7 +42,7 @@ class TestLaunchers(unittest.TestCase):
 
     @mock.patch('ngi_pipeline.engines.qc_ngi.launchers.execute_command_line')
     def test_queue_sbatch_file(self, mock_exec):
-        mock_exec().communicate.return_value = (b'Submitted batch job 12345', b'')
+        mock_exec().communicate.return_value = ('Submitted batch job 12345', '')
         sbatch_file_path = 'some/path/job.sbatch'
         job_id = launchers.queue_sbatch_file(sbatch_file_path)
         self.assertEqual(job_id, 12345)
