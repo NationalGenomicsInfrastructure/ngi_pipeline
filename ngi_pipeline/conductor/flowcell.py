@@ -291,7 +291,7 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
                                                      sample_name,
                                                      fc_full_id,
                                                      fq_file,
-                                                     fallback_libprep))
+                                                     libprep_name))
                         else:
                             error_text = ('Project "{}" / sample "{}" / seqrun "{}" / fastq "{}" '
                                           'has no libprep information in Charon. Skipping '
