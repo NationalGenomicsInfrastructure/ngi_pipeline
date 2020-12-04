@@ -8,6 +8,7 @@ import shutil
 
 import ngi_pipeline.utils.parsers as parsers
 from ngi_pipeline.tests import generate_test_data as gtd
+from six.moves import zip
 
 class TestCommon(unittest.TestCase):
 
@@ -111,7 +112,7 @@ class TestCommon(unittest.TestCase):
             '4,Sample_CEP-NA10860-PCR-free,CEP-NA10860-PCR-free,,,,GGTTCC,YM01,LIBRARY_NAME:CEP_Pool1'.split(','),
             '4,Sample_CEP-NA10860-PCR-free,CEP-NA10860-PCR-free,,,,GGTTCC,YM01,LIBRARY_NAME:CEP_Pool11'.split(',')
         ]
-        samplesheet_rows = [dict(zip(samplesheet_header, sample)) for sample in samplesheet_samples]
+        samplesheet_rows = [dict(list(zip(samplesheet_header, sample))) for sample in samplesheet_samples]
         for row in samplesheet_rows[0:-1]:
             row['index2'] = 'TGCGTT'
 

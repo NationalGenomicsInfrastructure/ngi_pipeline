@@ -1,12 +1,15 @@
 import locale
 import mock
 import os
-import StringIO
 import tempfile
 import unittest
 
 from ngi_pipeline.engines.sarek.parsers import QualiMapParser, PicardMarkDuplicatesParser, ParserIntegrator
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 class ExampleData(object):
 
@@ -115,11 +118,9 @@ class TestQualiMapParser(unittest.TestCase):
             self.assertDictEqual(
                 self.examples_expected[test_key][i],
                 test_fn(self.examples[test_key][i]) or dict())
-        for key in filter(lambda k: k != test_key, self.examples.keys()):
+        for key in [k for k in list(self.examples.keys()) if k != test_key]:
             self.assertTrue(
-                all(map(
-                    lambda l: test_fn(l) is None,
-                    self.examples[key])))
+                all([test_fn(l) is None for l in self.examples[key]]))
 
     def test___parse_numeric_assignment(self):
         test_key = "numeric_assignment"
@@ -168,7 +169,7 @@ class TestPicardMarkDuplicatesParser(unittest.TestCase):
 
     def setUp(self):
         self.example_output = ExampleData.markduplicates_input
-        self.example_handle = StringIO.StringIO(self.example_output)
+        self.example_handle = StringIO(self.example_output)
         self.example_data = ExampleData.markduplicates_output
 
     def test__parse_metrics_handle(self):
@@ -227,7 +228,7 @@ class TestParserIntegrator(unittest.TestCase):
     def setUpClass(cls):
 
         def _write_data(data):
-            with tempfile.NamedTemporaryFile(delete=False) as fh:
+            with tempfile.NamedTemporaryFile(delete=False, mode='w+t') as fh:
                 fh.write(data)
                 return fh.name
 

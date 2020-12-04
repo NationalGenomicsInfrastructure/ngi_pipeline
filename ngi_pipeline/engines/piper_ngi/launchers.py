@@ -162,7 +162,7 @@ def analyze(analysis_object, level='sample', config=None, config_file_path=None)
                                                            analysis_object.project, sample,
                                                            restart_finished_jobs=analysis_object.restart_finished_jobs,
                                                            files_to_copy=default_files_to_copy)
-                        for x in xrange(10):
+                        for x in range(10):
                             # Time delay to let sbatch get its act together
                             # (takes a few seconds to be visible with sacct)
                             try:
@@ -251,7 +251,7 @@ def collect_files_for_sample_analysis(project_obj, sample_obj,
                           project_obj.project_id, project_obj.base_path)
     sample_obj = proj_obj.add_sample(sample_obj.name, sample_obj.dirname)
     # filter out index files from the analysis
-    for fastq_path in filter(lambda f: not is_index_file(f), fastq_files_on_filesystem):
+    for fastq_path in [f for f in fastq_files_on_filesystem if not is_index_file(f)]:
         base_path, fastq = os.path.split(fastq_path)
         if not fastq:
             base_path, fastq = os.path.split(base_path) # Handles trailing slash
@@ -315,7 +315,7 @@ def sbatch_piper_sample(command_line_list, workflow_name, project, sample,
                                        slurm_err_log=slurm_err_log)
     sbatch_text_list = sbatch_text.split("\n")
     sbatch_extra_params = config.get("slurm", {}).get("extra_params", {})
-    for param, value in sbatch_extra_params.iteritems():
+    for param, value in sbatch_extra_params.items():
         sbatch_text_list.append("#SBATCH {} {}\n\n".format(param, value))
     modules_to_load = config.get("piper", {}).get("load_modules", [])
     if modules_to_load:

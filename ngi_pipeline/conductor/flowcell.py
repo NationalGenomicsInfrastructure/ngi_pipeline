@@ -18,6 +18,7 @@ from ngi_pipeline.utils.communication import mail_analysis
 from ngi_pipeline.utils.filesystem import do_symlink, locate_flowcell, safe_makedir
 from ngi_pipeline.utils.parsers import determine_library_prep_from_fcid, \
                                        get_sample_numbers_from_samplesheet
+from six.moves import filter
 
 LOG = minimal_logger(__name__)
 
@@ -86,7 +87,7 @@ def organize_projects_from_flowcell(demux_fcid_dirs, restrict_to_projects=None,
                              "information.".format(",".join(demux_fcid_dirs_set)))
         raise RuntimeError(error_message)
     else:
-        projects_to_analyze = projects_to_analyze.values()
+        projects_to_analyze = list(projects_to_analyze.values())
     return projects_to_analyze
 
 
@@ -113,9 +114,9 @@ def match_fastq_sample_number_to_samplesheet(fastq_file, samplesheet_sample_numb
         samnple_name, sample_num, lane_num = re.match(
             r'([\w-]+)_(S\d+)_L(\d{3})_\w+',
             os.path.basename(fastq_file)).groups()
-        return filter(
+        return list(filter(
             lambda s: _is_a_match(s, project_id, samnple_name, lane_num, sample_num),
-            samplesheet_sample_numbers)[0]
+            samplesheet_sample_numbers))[0]
     except AttributeError:
         # the sample and lane numbers could not be identified in fastq file name
         pass
@@ -248,7 +249,7 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
             sample_obj = project_obj.add_sample(name=sample_name, dirname=sample_name)
             # Get the Library Prep ID for each file
             pattern = re.compile(".*\.(fastq|fq)(\.gz|\.gzip|\.bz2)?$")
-            fastq_files = filter(pattern.match, sample.get('files', []))
+            fastq_files = list(filter(pattern.match, sample.get('files', [])))
             # For each fastq file, create the libprep and seqrun objects
             # and add the fastq file to the seqprep object
             # Note again that these objects only get created if they don't yet exist;
@@ -290,8 +291,7 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
                                                      sample_name,
                                                      fc_full_id,
                                                      fq_file,
-                                                     libprep_name,
-                                                     fallback_libprep))
+                                                     libprep_name))
                         else:
                             error_text = ('Project "{}" / sample "{}" / seqrun "{}" / fastq "{}" '
                                           'has no libprep information in Charon. Skipping '

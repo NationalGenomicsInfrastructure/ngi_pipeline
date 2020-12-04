@@ -9,10 +9,12 @@ import subprocess
 import time
 import xml.etree.cElementTree as ET
 import xml.parsers.expat
+import json
 
 from ngi_pipeline.database.classes import CharonSession, CharonError
 from ngi_pipeline.log.loggers import minimal_logger
 from ngi_pipeline.utils.classes import memoized
+from six.moves import filter
 
 LOG = minimal_logger(__name__)
 
@@ -108,11 +110,9 @@ def _get_and_trim_field_value(row_dict, fieldnames, trim_away_string=""):
     :return: the value of the first key-value pair matched or None if no matching key could be found
     """
     try:
-        return filter(
+        return list(filter(
             lambda v: v is not None,
-            map(
-                lambda k: row_dict.get(k),
-                fieldnames))[0].replace(trim_away_string, "")
+            [row_dict.get(k) for k in fieldnames]))[0].replace(trim_away_string, "")
     except IndexError:
         return None
 
@@ -126,9 +126,9 @@ def _get_libprepid_from_description(description):
     """
     # parameters are delimited with ';', values are indicated with ':'
     try:
-        return filter(
+        return list(filter(
             lambda param: param.startswith("LIBRARY_NAME:"),
-            description.split(";"))[0].split(":")[1]
+            description.split(";")))[0].split(":")[1]
     except IndexError:
         return None
 
@@ -156,11 +156,10 @@ def get_sample_numbers_from_samplesheet(samplesheet_path):
         ss_sample_name = _get_and_trim_field_value(row, ["SampleName", "Sample_Name"], "Sample_")
         ss_sample_id = _get_and_trim_field_value(row, ["SampleID", "Sample_ID"], "Sample_")
         ss_barcode = "-".join(
-            filter(
-                lambda x: x is not None,
-                [
-                    _get_and_trim_field_value(row, ["index"]),
-                    _get_and_trim_field_value(row, ["index2"])]))
+            [x for x in [_get_and_trim_field_value(row, ["index"]),
+                         _get_and_trim_field_value(row, ["index2"])] 
+             if x is not None]
+            )
         ss_lane_num = int(_get_and_trim_field_value(row, ["Lane"]))
         ss_libprepid = _get_libprepid_from_description(
             _get_and_trim_field_value(row, ["Description"]))
@@ -185,12 +184,12 @@ def parse_samplesheet(samplesheet_path):
     """
     try:
         # try opening as a gzip file (Uppsala)
-        f = gzip.open(samplesheet_path, 'rbU')
+        f = gzip.open(samplesheet_path)
         f.readline()
         f.seek(0)
     except IOError: # I would be more comfortable if this had an error code attr. Just sayin'.
         # Not gzipped
-        f = open(samplesheet_path, 'rbU')
+        f = open(samplesheet_path)
 
     # Two possible formats: simple csv and not simple weird INI/csv format
     # Okay this looks kind of bad and will probably break easily, but if you want
@@ -206,7 +205,7 @@ def parse_samplesheet(samplesheet_path):
     else:
         f.seek(0)
     return  [ row for row in csv.DictReader(f, dialect="excel", restval=None)
-              if all(map(lambda x: x is not None, row.values())) ] 
+              if all([x is not None for x in list(row.values())]) ] 
 
 
 def find_fastq_read_pairs(file_list):
@@ -229,7 +228,7 @@ def find_fastq_read_pairs(file_list):
     """
     # We only want fastq files
     pt = re.compile(".*\.(fastq|fq)(\.gz|\.gzip|\.bz2)?$")
-    file_list = filter(pt.match, file_list)
+    file_list = list(filter(pt.match, file_list))
     if not file_list:
         # No files found
         LOG.warning("No fastq files found.")
@@ -263,7 +262,7 @@ def find_fastq_read_pairs(file_list):
                       "cannot be paired: \"{}\"".format(file_pathname))
                 # File could not be paired, set by itself (?)
                 file_basename_stripsuffix = suffix_pattern.split(file_basename)[0]
-                matches_dict[file_basename_stripsuffix].append(os.abspath(file_pathname))
+                matches_dict[file_basename_stripsuffix].append(os.path.abspath(file_pathname))
     return dict(matches_dict)
 
 
@@ -304,8 +303,8 @@ class XmlToDict(dict):
     And then use xmldict for what it is... a dict.
     '''
     def __init__(self, parent_element):
-        if parent_element.items():
-            self.update(dict(parent_element.items()))
+        if list(parent_element.items()):
+            self.update(dict(list(parent_element.items())))
         for element in parent_element:
             if element:
                 # treat like dict - we assume that if the first two tags
@@ -320,16 +319,16 @@ class XmlToDict(dict):
                     # the value is the list itself
                     aDict = {element[0].tag: XmlToList(element)}
                 # if the tag has attributes, add those to the dict
-                if element.items():
-                    aDict.update(dict(element.items()))
+                if list(element.items()):
+                    aDict.update(dict(list(element.items())))
                 self.update({element.tag: aDict})
             # this assumes that if you've got an attribute in a tag,
             # you won't be having any text. This may or may not be a
             # good idea -- time will tell. It works for the way we are
             # currently doing XML configuration files...
             ## additional note from years later, nobody ever comes back to look at old code and examine assumptions
-            elif element.items():
-                self.update({element.tag: dict(element.items())})
+            elif list(element.items()):
+                self.update({element.tag: dict(list(element.items()))})
                 # add the following line
                 self[element.tag].update({"__Content__":element.text})
 
@@ -371,7 +370,7 @@ class RunMetricsParser(dict):
             return re.search(pattern, f) != None
         if not filter_fn:
             filter_fn = filter_function
-        return filter(filter_fn, self.files)
+        return list(filter(filter_fn, self.files))
 
     def parse_json_files(self, filter_fn=None):
         """Parse json files and return the corresponding dicts
@@ -402,7 +401,7 @@ class RunMetricsParser(dict):
         return dicts
 
 
-class RunInfoParser():
+class RunInfoParser(object):
     """RunInfo parser"""
     def __init__(self):
         self._data = {}
@@ -440,7 +439,7 @@ class RunInfoParser():
         p.ParseFile(fp)
 
 
-class RunParametersParser():
+class RunParametersParser(object):
     """runParameters.xml parser"""
     def __init__(self):
         self.data = {}

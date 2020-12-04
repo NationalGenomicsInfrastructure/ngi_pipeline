@@ -76,13 +76,13 @@ class SarekAnalysisSample(object):
         :param libprepid: the libprep id to return the corresponding NGILibprep object for
         :return: get the NGILibprep object corresponding to the supplied libprep id
         """
-        return list(filter(lambda lp: lp.name == libprepid, self.sample_ngi_object)).pop()
+        return [lp for lp in self.sample_ngi_object if lp.name == libprepid].pop()
 
     def sample_libprep_ids(self):
         """
         :return: a list of the libprep ids associated with the sample (based on the NGISample object)
         """
-        return list(map(lambda x: x.name, self.sample_ngi_object))
+        return [x.name for x in self.sample_ngi_object]
 
     def libprep_seqrun_ids(self, libprepid):
         """
@@ -90,7 +90,7 @@ class SarekAnalysisSample(object):
         :return: a list of the seqrun ids associated with the sample and specified libprep id
         (based on the NGISample object)
         """
-        return list(map(lambda x: x.name, self._get_sample_librep(libprepid)))
+        return [x.name for x in self._get_sample_librep(libprepid)]
 
     def libpreps_to_analyze(self):
         """
@@ -99,10 +99,9 @@ class SarekAnalysisSample(object):
 
         :return: a list of NGILibprep objects representing libpreps that fulfil the criteria for being analyzed
         """
-        return filter(
-            lambda lp: self.analysis_object.libprep_should_be_started(
-                self.projectid, self.sampleid, lp.name),
-            self.sample_ngi_object)
+        return [lp for lp in self.sample_ngi_object 
+                if self.analysis_object.libprep_should_be_started(
+                    self.projectid, self.sampleid, lp.name)]
 
     def seqruns_to_analyze(self, libprep):
         """
@@ -114,10 +113,8 @@ class SarekAnalysisSample(object):
         analysis
         :return: a list of NGISeqrun objects representing seqruns that fulfil the criteria for being analyzed
         """
-        return filter(
-            lambda sr: self.analysis_object.seqrun_should_be_started(
-                self.projectid, self.sampleid, libprep.name, sr.name, self.restart_options),
-            libprep)
+        return [sr for sr in libprep if self.analysis_object.seqrun_should_be_started(
+                self.projectid, self.sampleid, libprep.name, sr.name, self.restart_options)]
 
     def runid_and_fastq_files_for_sample(self):
         """
@@ -158,13 +155,13 @@ class SarekAnalysisSample(object):
         # the runfolder is represented with a Runfolder object
         runfolder = Runfolder(self.sample_seqrun_path(libprepid, seqrun.name))
         # iterate over the fastq file pairs belonging to the seqrun, filter out files with index reads
-        sample_fastq_objects = map(
-            lambda f: SampleFastq(os.path.join(runfolder.path, f)),
-            filter(lambda fq: not is_index_file(fq), seqrun.fastq_files))
+        sample_fastq_objects = [SampleFastq(os.path.join(runfolder.path, f)) 
+                                for f in [fq for fq in seqrun.fastq_files 
+                                          if not is_index_file(fq)]]
         for sample_fastq_file_pair in SampleFastq.sample_fastq_file_pair(sample_fastq_objects):
             runid = "{}.{}.{}".format(
                 runfolder.flowcell_id, sample_fastq_file_pair[0].lane_number, sample_fastq_file_pair[0].sample_number)
-            yield [runid] + map(lambda x: x.path, sample_fastq_file_pair)
+            yield [runid] + [x.path for x in sample_fastq_file_pair]
 
     def runid_and_fastq_files_from_csv(self):
         """

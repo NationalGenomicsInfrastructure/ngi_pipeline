@@ -57,7 +57,7 @@ def analyze(analysis_object, config=None, config_file_path=None):
                             seqrun.being_analyzed=True
                             sample.being_analyzed = sample.being_analyzed or True
                             # filter out index files from analysis
-                            for fastq_file in filter(lambda f: not is_index_file(f), seqrun.fastq_files):
+                            for fastq_file in [f for f in seqrun.fastq_files if not is_index_file(f)]:
                                 fastq_path=os.path.join(analysis_object.project.base_path, "DATA", analysis_object.project.project_id, sample.name, libprep.name, seqrun.name, fastq_file)
                                 fastq_files.append(fastq_path)
         

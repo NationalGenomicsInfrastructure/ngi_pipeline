@@ -105,7 +105,7 @@ class AnalysisTracker(object):
         # recreate a NGIProject object from the analysis
         project_obj = self.recreate_project_from_analysis(analysis_instance)
         # extract the sample object corresponding to the analysis entry
-        sample_obj = list(filter(lambda x: x.name == self.analysis_entry.sample_id, project_obj)).pop()
+        sample_obj = [x for x in project_obj if x.name == self.analysis_entry.sample_id].pop()
         self.analysis_sample = SarekAnalysisSample(project_obj, sample_obj, analysis_instance)
 
     def recreate_project_from_analysis(self, analysis_instance):
@@ -187,7 +187,7 @@ class AnalysisTracker(object):
             self.process_status,
             self.analysis_sample.projectid,
             self.analysis_sample.sampleid,
-            ",".join(libpreps_and_seqruns.keys()),
+            ",".join(list(libpreps_and_seqruns.keys())),
             ",".join(set([seqrun for seqruns in libpreps_and_seqruns.values() for seqrun in seqruns]))
         ))
         self.charon_connector.set_sample_analysis_status(
@@ -196,7 +196,7 @@ class AnalysisTracker(object):
             self.analysis_sample.projectid,
             self.analysis_sample.sampleid,
             recurse=True,
-            restrict_to_libpreps=libpreps_and_seqruns.keys(),
+            restrict_to_libpreps=list(libpreps_and_seqruns.keys()),
             restrict_to_seqruns=libpreps_and_seqruns)
 
     def report_analysis_results(self):

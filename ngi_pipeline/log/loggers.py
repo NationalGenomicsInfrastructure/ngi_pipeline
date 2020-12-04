@@ -8,7 +8,7 @@ import logging
 import os
 import sys
 
-from Queue import Queue
+from six.moves.queue import Queue
 from subprocess import Popen, PIPE
 from threading import Thread
 

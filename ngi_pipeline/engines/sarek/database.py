@@ -197,9 +197,8 @@ class CharonConnector(object):
         :return: list of libpreps, represented as dicts, belonging to the specified sample
         """
         try:
-            return filter(
-                lambda x: restrict_to is None or x["libprepid"] in restrict_to,
-                self.charon_session.sample_get_libpreps(projectid, sampleid)["libpreps"])
+            return [x for x in self.charon_session.sample_get_libpreps(projectid, sampleid)["libpreps"] 
+                    if restrict_to is None or x["libprepid"] in restrict_to]
         except (KeyError, CharonError) as e:
             sample_libpreps_exception = SampleLookupError(projectid, sampleid, reason=e)
             self.log.error(sample_libpreps_exception)
@@ -216,9 +215,8 @@ class CharonConnector(object):
         :return: list of seqruns, represented as dicts, belonging to the specified libprep
         """
         try:
-            return filter(
-                lambda x: restrict_to is None or x["seqrunid"] in restrict_to,
-                self.charon_session.libprep_get_seqruns(projectid, sampleid, libprepid)["seqruns"])
+            return [x for x in self.charon_session.libprep_get_seqruns(projectid, sampleid, libprepid)["seqruns"] 
+                    if restrict_to is None or x["seqrunid"] in restrict_to]
         except (KeyError, CharonError) as e:
             libprep_seqruns_exception = SampleLookupError(projectid, sampleid, reason=e)
             self.log.error(libprep_seqruns_exception)

@@ -9,6 +9,7 @@ import requests
 from ngi_pipeline.database.utils import load_charon_variables
 from ngi_pipeline.log.loggers import minimal_logger
 from requests.exceptions import Timeout
+import six
 
 LOG = minimal_logger(__name__)
 
@@ -20,10 +21,8 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-class CharonSession(requests.Session):
-    # Yeah that's right, I'm using __metaclass__
-    # I even looked up how to do it on StackOverflow all by myself
-    __metaclass__ = Singleton
+class CharonSession(six.with_metaclass(Singleton, requests.Session)):
+    
     def __init__(self, config=None, config_file_path=None):
         super(CharonSession, self).__init__()
 
@@ -197,7 +196,7 @@ class CharonSession(requests.Session):
                       genotype_status=None, runid=None, total_reads=None,
                       mean_autosomal_coverage=None, *args, **kwargs):
         if args: LOG.debug("Ignoring extra args: {}".format(", ".join(*args)))
-        if kwargs: LOG.debug("Ignoring extra kwargs: {}".format(", ".join(["{}: {}".format(k,v) for k,v in kwargs.iteritems()])))
+        if kwargs: LOG.debug("Ignoring extra kwargs: {}".format(", ".join(["{}: {}".format(k,v) for k,v in kwargs.items()])))
         url = self.construct_charon_url("seqrun", projectid, sampleid, libprepid, seqrunid)
         l_dict = locals()
         data = { k: str(l_dict.get(k)) for k in self._seqrun_params if l_dict.get(k)}

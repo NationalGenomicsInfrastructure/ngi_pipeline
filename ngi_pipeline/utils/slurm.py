@@ -4,6 +4,7 @@ import shlex
 import subprocess
 
 from ngi_pipeline.log.loggers import minimal_logger
+from six.moves import map
 
 
 LOG = minimal_logger(__name__)
@@ -86,7 +87,7 @@ def slurm_time_to_seconds(slurm_time_str):
     """
     try:
         days, time = slurm_time_str.split("-")
-        hours, minutes, seconds = map(int, time.split(":"))
+        hours, minutes, seconds = list(map(int, time.split(":")))
         hours += int(days) * 24
         minutes += hours * 60
         seconds += minutes * 60

@@ -1,10 +1,10 @@
-
 import json
 import locale
 import re
-import string
 
 from ngi_pipeline.engines.sarek.exceptions import ParserException, ParserMetricNotFoundException
+from six.moves import map
+from six.moves import zip
 
 
 class ParserIntegrator(object):
@@ -103,7 +103,7 @@ class MultiQCParser(ReportParser):
         pass
 
     def total_sequenced_reads(self):
-        source = list(filter(lambda s: s.endswith(".real"), self.data_source("Samtools", "stats"))).pop()
+        source = [s for s in self.data_source("Samtools", "stats") if s.endswith(".real")].pop()
         source_data = self.multiqc_samtools_stats()[source]
         return source_data["raw_total_sequences"]
 
@@ -188,7 +188,7 @@ class QualiMapParser(ReportParser):
         # identify key = value assignments
         try:
             key, value = re.search(r'^\s+([^=]+)= (.+)$', line).groups()
-            key, value = map(string.strip, [key, value])
+            key, value = list(map(str.strip, [key, value]))
             return {key: value}
         except AttributeError:
             # not an assignment
@@ -274,21 +274,21 @@ class PicardMarkDuplicatesParser(ReportParser):
 
         def __parse_library_lines():
             local_libraries = []
-            local_line = fh.next().strip()
+            local_line = next(fh).strip()
             while len(local_line) > 0 and not local_line.startswith("##"):
                 local_libraries.append(
-                    map(
+                    list(map(
                         self._convert_to_unit,
-                        local_line.split()))
-                local_line = fh.next().strip()
+                        local_line.split())))
+                local_line = next(fh).strip()
             return local_libraries
 
         for line in fh:
             if line is None or not line.strip().startswith("## METRICS CLASS"):
                 continue
-            headers = fh.next().strip().split()
+            headers = next(fh).strip().split()
             self.data = {"metrics": [
-                dict(zip(headers, library)) for library in __parse_library_lines()]}
+                dict(list(zip(headers, library))) for library in __parse_library_lines()]}
 
     @staticmethod
     def _convert_to_unit(raw_value):
@@ -315,7 +315,9 @@ class PicardMarkDuplicatesParser(ReportParser):
         to return the average across all libraries
         :return: The percent of duplication as a float
         """
-        libraries = filter(lambda l: library is None or l["LIBRARY"] == library, self.data.get("metrics", []))
+        libraries = [l for l in self.data.get("metrics", []) 
+                     if library is None 
+                     or l["LIBRARY"] == library]
         total_reads = \
             sum([lib["UNPAIRED_READS_EXAMINED"] for lib in libraries]) + \
             2*sum([lib["READ_PAIRS_EXAMINED"] for lib in libraries])

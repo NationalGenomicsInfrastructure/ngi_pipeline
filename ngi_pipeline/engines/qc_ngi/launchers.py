@@ -41,7 +41,7 @@ def analyze(project, sample, quiet=False, config=None, config_file_path=None):
                                                  seqrun.name,
                                                  fastq_file)
                 fastq_files_to_process.append(path_to_src_fastq)
-    paired_fastq_files = find_fastq_read_pairs(fastq_files_to_process).values()
+    paired_fastq_files = list(find_fastq_read_pairs(fastq_files_to_process).values())
     qc_cl_list = return_cls_for_workflow("qc", paired_fastq_files, sample_analysis_path)
 
     sbatch_file_path = create_sbatch_file(qc_cl_list, project, sample, config)
@@ -63,7 +63,7 @@ def analyze(project, sample, quiet=False, config=None, config_file_path=None):
                 f.write("{}\n".format(slurm_job_id))
         except IOError as e:
             LOG.warning('Could not write slurm job id for project/sample '
-                     '{}/{} to file "{}" ({}). So... yup. Good luck bro!'.format(e))
+                     '{}/{} to file "{}" ({})'.format(project, sample, slurm_jobid_file, e))
 
 
 def queue_sbatch_file(sbatch_file_path):
@@ -107,7 +107,7 @@ def create_sbatch_file(cl_list, project, sample, config):
         slurm_project_id = config["environment"]["project_id"]
     except KeyError:
         raise RuntimeError('No SLURM project id specified in configuration file '
-                           'for job "{}"'.format(job_identifier))
+                           'for job "{}"'.format(job_label))
     slurm_queue = config.get("slurm", {}).get("queue") or "core"
     num_cores = config.get("slurm", {}).get("cores") or 16
     slurm_time = config.get("qc", {}).get("job_walltime", {}) or "1-00:00:00"
@@ -124,7 +124,7 @@ def create_sbatch_file(cl_list, project, sample, config):
                                        slurm_err_log=slurm_err_log)
     sbatch_text_list = sbatch_text.split("\n")
     sbatch_extra_params = config.get("slurm", {}).get("extra_params", {})
-    for param, value in sbatch_extra_params.iteritems():
+    for param, value in sbatch_extra_params.items():
         sbatch_text_list.append("#SBATCH {} {}\n\n".format(param, value))
     sbatch_text_list.append("echo -ne '\\n\\nExecuting command lines at '")
     sbatch_text_list.append("date")

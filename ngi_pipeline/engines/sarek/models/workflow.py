@@ -117,7 +117,7 @@ class SarekMainStep(SarekWorkflowStep):
         # MarkDuplicates output files may be named differently depending on if the pipeline was started with a single
         # fastq file pair or multiple file pairs
         markdups_dir = os.path.join(report_dir, "MarkDuplicates")
-        metric_files = filter(lambda f: f.endswith(".metrics"), os.listdir(markdups_dir))
+        metric_files = [f for f in os.listdir(markdups_dir) if f.endswith(".metrics")]
         if not metric_files:
             raise ParserException(cls, "no metrics file for MarkDuplicates found for sample {} in {}".format(
                 analysis_sample.sampleid, markdups_dir))

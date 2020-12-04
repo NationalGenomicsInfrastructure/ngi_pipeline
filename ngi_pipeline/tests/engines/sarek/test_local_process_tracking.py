@@ -33,7 +33,7 @@ class TestAnalysisTracker(unittest.TestCase):
         analysis_entry = TrackingConnector._SampleAnalysis()
         analysis_entry.project_id = self.project_obj.project_id
         analysis_entry.project_base_path = self.project_obj.base_path
-        analysis_entry.sample_id = self.project_obj.samples.keys()[0]
+        analysis_entry.sample_id = list(self.project_obj.samples.keys())[0]
         analysis_entry.workflow = "SarekGermlineAnalysis"
         return analysis_entry
 
@@ -65,7 +65,7 @@ class TestAnalysisTracker(unittest.TestCase):
             return self.seqruns[libprep]
 
         tracker = self.get_tracker_instance(*mocks)
-        tracker.analysis_sample.sample_libprep_ids.return_value = self.seqruns.keys()
+        tracker.analysis_sample.sample_libprep_ids.return_value = list(self.seqruns.keys())
         tracker.analysis_sample.libprep_seqrun_ids.side_effect = _seqruns_for_libprep
 
         observed_libpreps_and_seqruns = tracker.get_libpreps_and_seqruns()
@@ -77,16 +77,16 @@ class TestAnalysisTracker(unittest.TestCase):
             for libprep_obj in sample_obj:
                 for seqrun_obj in libprep_obj:
                     fastq_files.extend(
-                        map(
-                            lambda f: os.path.join(
-                                self.project_obj.base_path,
-                                "DATA",
-                                self.project_obj.dirname,
-                                sample_obj.dirname,
-                                libprep_obj.dirname,
-                                seqrun_obj.dirname,
-                                f),
-                            seqrun_obj.fastq_files))
+                        [os.path.join(
+                            self.project_obj.base_path,
+                            "DATA",
+                            self.project_obj.dirname,
+                            sample_obj.dirname,
+                            libprep_obj.dirname,
+                            seqrun_obj.dirname,
+                            f)
+                         for f in seqrun_obj.fastq_files]
+                        )
         observed_project_obj = AnalysisTracker._project_from_fastq_file_paths(fastq_files)
         self.assertEqual(self.project_obj, observed_project_obj)
 
@@ -104,7 +104,7 @@ class TestAnalysisTracker(unittest.TestCase):
         self.assertEqual(
             expected_status,
             tracker.process_status)
-        process_mock.assert_called_once_with(kwargs.values()[0], expected_exit_code_path)
+        process_mock.assert_called_once_with(list(kwargs.values())[0], expected_exit_code_path)
 
     def test_get_analysis_status_process(self, *mocks):
         with mock.patch(
@@ -131,7 +131,7 @@ class TestAnalysisTracker(unittest.TestCase):
                 self.assertIn(arg, call_args)
             expected_kwargs = {
                 "recurse": True,
-                "restrict_to_libpreps": self.seqruns.keys(),
+                "restrict_to_libpreps": list(self.seqruns.keys()),
                 "restrict_to_seqruns": self.seqruns
             }
             self.assertDictEqual(expected_kwargs, call_kwargs)

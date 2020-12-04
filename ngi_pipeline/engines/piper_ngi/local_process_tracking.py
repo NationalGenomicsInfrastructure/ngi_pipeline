@@ -371,7 +371,7 @@ def update_coverage_for_sample_seqruns(project_id, sample_id, piper_qc_dir,
     seqruns_by_libprep = get_finished_seqruns_for_sample(project_id, sample_id)
 
     charon_session = CharonSession()
-    for libprep_id, seqruns in seqruns_by_libprep.iteritems():
+    for libprep_id, seqruns in seqruns_by_libprep.items():
         for seqrun_id in seqruns:
             label = "{}/{}/{}/{}".format(project_id, sample_id, libprep_id, seqrun_id)
             genome_results_file_paths=glob.glob(os.path.join(piper_qc_dir, "{}.{}*.qc".format(sample_id, seqrun_id.split('_')[-1]),"genome_results.txt"))
