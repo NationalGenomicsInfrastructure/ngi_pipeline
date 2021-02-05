@@ -3,7 +3,7 @@
 #SBATCH -A slurm_proj_id
 #SBATCH -p core
 #SBATCH -n 16
-#SBATCH -t 1-00:00:00
+#SBATCH -t 3-00:00:00
 #SBATCH -J qc_P123-P123_1001
 #SBATCH -o {}
 #SBATCH -e {}
