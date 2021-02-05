@@ -18,3 +18,4 @@ echo
 Hello!
 echo -ne '\n\nFinished execution at '
 date
+
