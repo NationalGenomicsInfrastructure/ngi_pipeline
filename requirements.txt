@@ -1,7 +1,7 @@
 click
 CouchDB>=0.9
 coverage>=3.7.1
-inflect>=0.2.5
+inflect>=0.2.5,<=3.0.2 #Versions greater than 3.0.2 don't support py2.7, remove upper limit when py3 migration is complete
 psutil>=2.1.1
 pyexcel<=0.5.15
 pyexcel-xlsx
