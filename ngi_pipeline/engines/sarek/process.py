@@ -314,4 +314,4 @@ class SlurmConnector(ProcessConnector):
         try:
             return ProcessRunning if core_get_slurm_job_status(slurm_job_id) is None else ProcessStopped
         except RuntimeError as e:
-            raise SlurmStatusNotRecognizedError(slurm_job_id, e.message)
+            raise SlurmStatusNotRecognizedError(slurm_job_id, e)
