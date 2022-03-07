@@ -362,7 +362,10 @@ def parse_flowcell(fc_dir):
     if not os.access(fc_dir, os.R_OK): os_msg = "could not be read (permission denied)"
     if locals().get('os_msg'): raise OSError("Error with flowcell dir {}: directory {}".format(fc_dir, os_msg))
     LOG.info('Parsing flowcell directory "{}"...'.format(fc_dir))
-    samplesheet_path = os.path.join(fc_dir, "SampleSheet.csv")
+    if os.path.exists(os.path.join(fc_dir, "SampleSheet_copy.csv")):
+        samplesheet_path = os.path.join(fc_dir, "SampleSheet_copy.csv")
+    else:
+        samplesheet_path = os.path.join(fc_dir, "SampleSheet.csv")
     if not os.path.exists(samplesheet_path):
         LOG.warning("Could not find samplesheet in directory {}".format(fc_dir))
         samplesheet_path = None
