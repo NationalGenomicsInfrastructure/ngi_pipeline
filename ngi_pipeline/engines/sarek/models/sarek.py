@@ -252,6 +252,19 @@ class SarekAnalysis(object):
             return restart_failed_jobs
         return True
 
+    def analyze_project(self, analysis_object, batch_analysis=True):
+        analysis_samples = []
+        for sample_object in analysis_object.project:
+            try:
+                analysis_samples.append(
+                    self.analyze_sample(
+                        sample_object=sample_object,
+                        analysis_object=analysis_object))
+            except SampleNotValidForAnalysisError as e:
+                analysis_object.log.error(e)
+
+        self.start_analysis(analysis_samples=analysis_samples, batch_analysis=batch_analysis)
+
     def analyze_sample(self, sample_object, analysis_object):
         """
         Start the analysis for the supplied NGISample object and with the analysis details contained within the supplied
@@ -281,30 +294,52 @@ class SarekAnalysis(object):
             raise SampleNotValidForAnalysisError(
                 analysis_sample.projectid, analysis_sample.sampleid, "nothing to analyze")
 
-        # get the paths needed for the analysis
-        self.create_tsv_file(analysis_sample)
+        return analysis_sample
 
-        # get the command line to use for the analysis and execute it using the process connector
-        cmd = self.command_line(analysis_sample)
-        pid = self.process_connector.execute_process(
-            cmd,
-            working_dir=analysis_sample.sample_analysis_path(),
-            exit_code_path=analysis_sample.sample_analysis_exit_code_path(),
-            job_name="{}-{}-{}".format(
-                analysis_object.project.name,
-                sample_object.name,
-                str(self)))
-        self.log.info("launched '{}', with {}, pid: {}".format(cmd, type(self.process_connector), pid))
+    def start_analysis(self, analysis_samples, batch_analysis=False):
 
-        # record the analysis details in the local tracking database
-        self.tracking_connector.record_process_sample(
-            analysis_sample.projectid,
-            analysis_sample.sampleid,
-            analysis_sample.project_base_path,
-            str(self),
-            "sarek",
-            pid,
-            type(self.process_connector))
+        pid = None
+        for analysis_sample in analysis_samples:
+            cmd = self.command_line(analysis_sample, batch_analysis=batch_analysis)
+
+            # if batching the analysis, only do this once (when pid is unset)
+            if batch_analysis:
+                if pid is None:
+                    self.create_project_tsv_file(analysis_samples)
+                    workdir = analysis_sample.project_analysis_path()
+                    exit_code_path = analysis_sample.project_analysis_exit_code_path()
+                    job_name = "{}-{}".format(
+                        analysis_sample.projectid,
+                        str(self))
+            else:
+                self.create_tsv_file(analysis_sample)
+                workdir = analysis_sample.sample_analysis_path()
+                exit_code_path = analysis_sample.sample_analysis_exit_code_path()
+                job_name = "{}-{}-{}".format(
+                    analysis_sample.projectid,
+                    analysis_sample.sampleid,
+                    str(self))
+
+            # if batching the analysis, only do this once (when pid is unset)
+            if not batch_analysis or pid is None:
+                pid = self.process_connector.execute_process(
+                    cmd,
+                    working_dir=workdir,
+                    exit_code_path=exit_code_path,
+                    job_name=job_name)
+                self.log.info(
+                    "launched '{}', with {}, pid: {}".format(
+                        cmd, type(self.process_connector), pid))
+
+            # record the analysis details in the local tracking database
+            self.tracking_connector.record_process_sample(
+                analysis_sample.projectid,
+                analysis_sample.sampleid,
+                analysis_sample.project_base_path,
+                str(self),
+                "sarek",
+                pid,
+                type(self.process_connector))
 
     def sample_should_be_started(self,
                                  projectid,
@@ -387,7 +422,7 @@ class SarekAnalysis(object):
                 "" if should_be_started else " NOT"))
         return should_be_started
 
-    def processing_steps(self, analysis_sample):
+    def processing_steps(self, analysis_sample, batch_analysis=False):
         """
         Configure and get a list of the processing steps included in the analysis. Subclasses may call this and add
         additional steps as needed.
@@ -402,7 +437,7 @@ class SarekAnalysis(object):
                 self.nextflow_config.get("subcommand", "run"),
                 **{k: v for k, v in self.nextflow_config.items() if k != "command" and k != "subcommand"})]
 
-    def command_line(self, analysis_sample):
+    def command_line(self, analysis_sample, batch_analysis=False):
         raise NotImplementedError("command_line should be implemented in the subclasses")
 
     def generate_tsv_file_contents(self, analysis_sample):
@@ -414,6 +449,15 @@ class SarekAnalysis(object):
     def cleanup(self, analysis_sample):
         self.process_connector.cleanup(analysis_sample.sample_analysis_work_dir())
 
+    def _create_tsv_file(self, analysis_sample):
+        rows = self.generate_tsv_file_contents(analysis_sample)
+        if not rows:
+            raise SampleNotValidForAnalysisError(
+                analysis_sample.projectid,
+                analysis_sample.sampleid,
+                "no libpreps or seqruns to analyze")
+        return rows
+
     def create_tsv_file(self, analysis_sample):
         """
         Create a tsv file containing the information needed by Sarek for starting the analysis. Will decide the path to
@@ -423,34 +467,58 @@ class SarekAnalysis(object):
         :param analysis_sample: a SarekAnalysisSample object representing the sample to create the tsv file for
         :return: the path to the created tsv file
         """
-        rows = self.generate_tsv_file_contents(analysis_sample)
-        if not rows:
-            raise SampleNotValidForAnalysisError(
-                analysis_sample.projectid,
-                analysis_sample.sampleid,
-                "no libpreps or seqruns to analyze")
-
+        rows = self._create_tsv_file(analysis_sample)
         tsv_file = analysis_sample.sample_analysis_tsv_file()
+        return self.write_tsv_file(rows, tsv_file)
+
+    def create_project_tsv_file(self, analysis_samples):
+        rows = []
+        tsv_file = None
+        for analysis_sample in analysis_samples:
+            if not rows:
+                tsv_file = analysis_sample.project_analysis_tsv_file()
+            rows.extend(self._create_tsv_file(analysis_sample))
+        return self.write_tsv_file(rows, tsv_file)
+
+    @classmethod
+    def write_tsv_file(cls, tsv_rows, tsv_file):
         safe_makedir(os.path.dirname(tsv_file))
         with open(tsv_file, "w") as fh:
             writer = csv.writer(fh, dialect=csv.excel_tab)
-            writer.writerows(rows)
+            writer.writerows(tsv_rows)
         return tsv_file
 
     @staticmethod
-    def _sample_paths(project_base_path, projectid, sampleid, subroot=None):
+    def _project_paths(project_base_path, projectid, subroot=None):
         try:
-            return os.path.join(project_base_path, subroot, projectid, sampleid)
+            return os.path.join(project_base_path, subroot, projectid)
         except AttributeError:
-            return os.path.join(project_base_path, projectid, sampleid)
+            return os.path.join(project_base_path, projectid)
+
+    @classmethod
+    def _sample_paths(cls, project_base_path, projectid, sampleid, subroot=None):
+        return os.path.join(cls._project_paths(project_base_path, projectid, subroot), sampleid)
 
     @classmethod
     def sample_data_path(cls, *args):
         return cls._sample_paths(*args, subroot="DATA")
 
     @classmethod
+    def project_analysis_path(cls, *args):
+        return os.path.join(cls._project_paths(*args, subroot="ANALYSIS"), cls.__name__)
+
+    @classmethod
     def sample_analysis_path(cls, *args):
         return os.path.join(cls._sample_paths(*args, subroot="ANALYSIS"), cls.__name__)
+
+    @classmethod
+    def _project_analysis_file(cls, project_base_path, projectid, extension):
+        return os.path.join(
+            cls.project_analysis_path(project_base_path, projectid),
+            "{}-{}.{}".format(
+                projectid,
+                cls.__name__,
+                extension))
 
     @classmethod
     def _sample_analysis_file(cls, project_base_path, projectid, sampleid, extension):
@@ -463,16 +531,32 @@ class SarekAnalysis(object):
                 extension))
 
     @classmethod
+    def project_analysis_exit_code_path(cls, *args):
+        return cls._project_analysis_file(*args, extension="exit_code")
+
+    @classmethod
     def sample_analysis_exit_code_path(cls, *args):
         return cls._sample_analysis_file(*args, extension="exit_code")
+
+    @classmethod
+    def project_analysis_tsv_file(cls, *args):
+        return cls._project_analysis_file(*args, extension="tsv")
 
     @classmethod
     def sample_analysis_tsv_file(cls, *args):
         return cls._sample_analysis_file(*args, extension="tsv")
 
     @classmethod
+    def project_analysis_work_dir(cls, *args):
+        return os.path.join(cls.project_analysis_path(*args), "work")
+
+    @classmethod
     def sample_analysis_work_dir(cls, *args):
         return os.path.join(cls.sample_analysis_path(*args), "work")
+
+    @classmethod
+    def project_analysis_results_dir(cls, *args):
+        return os.path.join(cls.project_analysis_path(*args), "results")
 
     @classmethod
     def sample_analysis_results_dir(cls, *args):
@@ -485,27 +569,31 @@ class SarekGermlineAnalysis(SarekAnalysis):
     methods and configurations are overriding the base class equivalents.
     """
 
-    def processing_steps(self, analysis_sample):
+    def processing_steps(self, analysis_sample, batch_analysis=False):
         """
         Configure and get a list of the processing steps included in the analysis.
 
         :param analysis_sample: the SarekAnalysisSample to analyze
         :return: a list of the processing steps included in the analysis
         """
+        outdir = analysis_sample.project_analysis_results_dir() \
+            if batch_analysis else analysis_sample.sample_analysis_results_dir()
+        tsv_file = analysis_sample.project_analysis_tsv_file() \
+            if batch_analysis else analysis_sample.sample_analysis_tsv_file()
         local_sarek_config = {
-            "outdir": analysis_sample.sample_analysis_results_dir()}
+            "outdir": outdir}
         local_sarek_config.update({k: v for k, v in self.sarek_config.items() if k != "command"})
         processing_steps = super(
             SarekGermlineAnalysis,
-            self).processing_steps(analysis_sample)
+            self).processing_steps(analysis_sample, batch_analysis=batch_analysis)
         processing_steps.append(
             SarekMainStep(
                 self.sarek_config.get("command"),
-                input=analysis_sample.sample_analysis_tsv_file(),
+                input=tsv_file,
                 **local_sarek_config))
         return processing_steps
 
-    def command_line(self, analysis_sample):
+    def command_line(self, analysis_sample, batch_analysis=False):
         """
         Creates the command line for launching the sample analysis and returns it as a string. Works by chaining the
         command line from each of the workflow steps in the analysis workflow.
@@ -516,7 +604,7 @@ class SarekGermlineAnalysis(SarekAnalysis):
         # each analysis step is represented by a SarekWorkflowStep instance
         # create the command line by chaining the command lines from each processing step
         return " ".join(
-            [step.command_line() for step in self.processing_steps(analysis_sample)])
+            [step.command_line() for step in self.processing_steps(analysis_sample, batch_analysis=batch_analysis)])
 
     def generate_tsv_file_contents(self, analysis_sample):
         """
