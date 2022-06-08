@@ -244,8 +244,10 @@ class SlurmConnector(ProcessConnector):
         safe_makedir(slurm_script_dir)
         slurm_script = os.path.join(
             slurm_script_dir, "{}.{}.sbatch".format(job_name, datetime.datetime.now().strftime("%s")))
-        slurm_stdout = "{}.out".format(slurm_script)
-        slurm_stderr = "{}.err".format(slurm_script)
+        slurm_stdout = os.path.join(
+            slurm_script_dir, f"{job_name}.%j.out")
+        slurm_stderr = os.path.join(
+            slurm_script_dir, f"{job_name}.%j.err")
 
         with open(slurm_script, "w") as fh:
             fh.write(
