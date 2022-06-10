@@ -1,7 +1,9 @@
 #!/bin/env python
 
 import argparse
+import csv
 import os
+from functools import reduce
 
 from ngi_pipeline.engines.sarek import local_process_tracking
 from ngi_pipeline.engines.sarek.database import TrackingConnector
@@ -39,12 +41,29 @@ class DiskTrackingSession(object):
         return self
 
 
-def update_charon_with_sample(db_session, project_base_path, project_sample_dir, limit_to_sample):
-    project_analysis_dir = os.path.dirname(project_sample_dir)
-    project_id = os.path.basename(project_analysis_dir)
-    sample_id = os.path.basename(project_sample_dir)
-    if not os.path.isdir(project_sample_dir):
-        return
+def locate_tsv(dirpath):
+    if os.path.basename(dirpath) == "SarekGermlineAnalysis":
+        return [
+            os.path.join(dirpath, f)
+            for f in filter(lambda x: x.endswith(".tsv"), os.listdir(dirpath))]
+    try:
+        return reduce(lambda x, y: x + y,
+                      map(lambda d: locate_tsv(d),
+                          filter(lambda x: os.path.isdir(x),
+                                 map(lambda f: os.path.join(dirpath, f),
+                                     os.listdir(dirpath)))))
+    except TypeError:
+        return []
+
+
+def samples_from_tsv(tsvfile):
+    with open(tsvfile) as fh:
+        reader = csv.reader(fh, dialect=csv.excel_tab)
+        return list(set([sample[0] for sample in reader]))
+
+
+def update_charon_with_sample(
+        db_session, project_base_path, project_id, sample_id, limit_to_sample):
 
     # skip if we are only to add a specified sample and this is not it
     if limit_to_sample is not None and limit_to_sample != sample_id:
@@ -61,6 +80,7 @@ def update_charon_with_sample(db_session, project_base_path, project_sample_dir,
             process_id=999999)
     )
 
+
 @with_ngi_config
 def update_charon_with_project(project, sample=None, config=None, config_file_path=None):
     project_base_path = os.path.join(
@@ -75,13 +95,15 @@ def update_charon_with_project(project, sample=None, config=None, config_file_pa
 
     db_session = DiskTrackingSession()
 
-    for project_sample in os.listdir(project_analysis_dir):
-        sample_path = os.path.join(project_analysis_dir, project_sample)
-        update_charon_with_sample(
-            db_session,
-            project_base_path,
-            sample_path,
-            sample)
+    for tsvfile in locate_tsv(project_analysis_dir):
+        sample_ids = samples_from_tsv(tsvfile)
+        for sample_id in sample_ids:
+            update_charon_with_sample(
+                db_session,
+                project_base_path,
+                project,
+                sample_id,
+                sample)
 
     tracking_connector = TrackingConnector(
         config,

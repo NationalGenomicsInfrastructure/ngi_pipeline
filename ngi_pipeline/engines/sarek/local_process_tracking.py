@@ -115,8 +115,14 @@ class AnalysisTracker(object):
         :param analysis_instance: a SarekAnalysis instance
         :return: a NGIProject object recreated from the information in the tsv file
         """
-        tsv_file_path = analysis_instance.sample_analysis_tsv_file(
-            self.analysis_entry.project_base_path, self.analysis_entry.project_id, self.analysis_entry.sample_id)
+        tsv_file_path = analysis_instance.project_analysis_tsv_file(
+            self.analysis_entry.project_base_path, self.analysis_entry.project_id
+        )
+        if not os.path.exists(tsv_file_path):
+            tsv_file_path = analysis_instance.sample_analysis_tsv_file(
+                self.analysis_entry.project_base_path,
+                self.analysis_entry.project_id,
+                self.analysis_entry.sample_id)
         runid_and_fastq_file_paths = analysis_instance.runid_and_fastq_files_from_tsv_file(tsv_file_path)
         # fetch just the fastq file paths
         fastq_file_paths = [
@@ -172,7 +178,10 @@ class AnalysisTracker(object):
         status_type = ProcessStatus if self.analysis_entry.process_id is not None else JobStatus
         processid_or_jobid = self.analysis_entry.process_id or self.analysis_entry.slurm_job_id
         exit_code_path = self.analysis_sample.sample_analysis_exit_code_path()
-        self.process_status = status_type.get_type_from_processid_and_exit_code_path(processid_or_jobid, exit_code_path)
+        if not os.path.exists(exit_code_path):
+            exit_code_path = self.analysis_sample.project_analysis_exit_code_path()
+        self.process_status = status_type.get_type_from_processid_and_exit_code_path(
+            processid_or_jobid, exit_code_path)
 
     def report_analysis_status(self):
         """
@@ -251,4 +260,9 @@ class AnalysisTracker(object):
 
         self.log.info("analysis of sample {} finished successfully, removing temporary work directory".format(
             self.analysis_sample.sampleid))
-        self.analysis_sample.analysis_object.cleanup(self.analysis_sample)
+        try:
+            self.analysis_sample.analysis_object.cleanup(self.analysis_sample)
+        except FileNotFoundError:
+            self.log.debug(
+                "could not remove temporary work directory for {}".format(
+                    self.analysis_sample.sampleid))

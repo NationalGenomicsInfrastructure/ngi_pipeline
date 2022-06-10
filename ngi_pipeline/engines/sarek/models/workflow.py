@@ -114,6 +114,12 @@ class SarekMainStep(SarekWorkflowStep):
             analysis_sample.sample_analysis_results_dir(),
             "Reports",
             analysis_sample.sampleid)
+        if not os.path.exists(report_dir):
+            report_dir = os.path.join(
+                analysis_sample.project_analysis_results_dir(),
+                "Reports",
+                analysis_sample.sampleid)
+
         # MarkDuplicates output files may be named differently depending on if the pipeline was started with a single
         # fastq file pair or multiple file pairs
         markdups_dir = os.path.join(report_dir, "MarkDuplicates")
