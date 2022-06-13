@@ -16,7 +16,7 @@ LOG = minimal_logger(__name__)
 @with_ngi_config
 def launch_analysis(projects_to_analyze, restart_failed_jobs=False,
                     restart_finished_jobs=False, restart_running_jobs=False,
-                    no_qc=False, exec_mode="sbatch",
+                    no_qc=False, exec_mode="sbatch", batch_analysis=False,
                     quiet=False, manual=False,
                     config=None, config_file_path=None):
     """Launch the appropriate analysis for each fastq file in the project.
@@ -31,7 +31,7 @@ def launch_analysis(projects_to_analyze, restart_failed_jobs=False,
             analysis=NGIAnalysis(project=project, restart_failed_jobs=restart_failed_jobs,
                         restart_finished_jobs=restart_finished_jobs,
                         restart_running_jobs=restart_running_jobs,
-                        no_qc=no_qc,
+                        no_qc=no_qc, batch_analysis=batch_analysis,
                         exec_mode=exec_mode, quiet=quiet, manual=manual,
                         config=config, config_file_path=config_file_path,
                         log=LOG)

@@ -9,7 +9,7 @@ from six.moves import zip
 class NGIAnalysis(object):
     def __init__(self, project, restart_failed_jobs=None,
                     restart_finished_jobs=False, restart_running_jobs=False,
-                    no_qc=False, exec_mode="sbatch",
+                    no_qc=False, exec_mode="sbatch", batch_analysis=False,
                     quiet=False, manual=False, config=None, config_file_path=None,
                     log=None, sample=None):
         self.project=project
@@ -19,6 +19,7 @@ class NGIAnalysis(object):
         self.restart_running_jobs=restart_running_jobs
         self.no_qc=no_qc 
         self.exec_mode=exec_mode
+        self.batch_analysis = batch_analysis
         self.quiet=quiet
         self.manual=manual
         self.config=config

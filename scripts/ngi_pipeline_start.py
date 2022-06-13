@@ -124,6 +124,8 @@ if __name__ == "__main__":
             help='Start the analysis of a pre-parsed project.')
     analyze_project.add_argument("--no-qc", action="store_true",
             help="Skip qc analysis.")
+    analyze_project.add_argument("--batch-analysis", action="store_true",
+            help="Batch analysis project-wise")
     analyze_project.add_argument('analyze_project_dirs', nargs='+',
             help='The path to the project folder to be analyzed.')
 
@@ -190,6 +192,7 @@ if __name__ == "__main__":
                                       restart_failed_jobs=args.restart_failed_jobs,
                                       restart_finished_jobs=args.restart_finished_jobs,
                                       restart_running_jobs=args.restart_running_jobs,
+                                      batch_analysis=args.batch_analysis,
                                       no_qc=args.no_qc,
                                       quiet=args.quiet,
                                       manual=True)

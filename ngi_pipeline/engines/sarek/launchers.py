@@ -43,7 +43,7 @@ def analyze(analysis_object):
         process_connector=slurm_conector)
 
     # iterate over the samples in the project and launch analysis in batch
-    analysis_engine.analyze_project(analysis_object, batch_analysis=True)
+    analysis_engine.analyze_project(analysis_object, batch_analysis=analysis_object.batch_analysis)
 
     # finally, let's force a sync of the local SQLite DB and Charon
     time.sleep(5)
