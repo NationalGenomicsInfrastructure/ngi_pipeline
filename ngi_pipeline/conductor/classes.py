@@ -152,7 +152,7 @@ def get_engine_for_bp(project, config=None, config_file_path=None):
         best_practice_analysis = charon_session.project_get(project.project_id)["best_practice_analysis"]
     except KeyError:
         error_msg = ('No best practice analysis specified in Charon for '
-                     'project "{}". Using "whole_genome_reseq"'.format(project))
+                     'project "{}". Using "wgs_germline"'.format(project))
         raise RuntimeError(error_msg)
     try:
         analysis_module = load_engine_module(best_practice_analysis, config)

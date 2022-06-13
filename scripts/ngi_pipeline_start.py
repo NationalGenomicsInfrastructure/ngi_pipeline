@@ -101,8 +101,12 @@ if __name__ == "__main__":
                   "use this value when creating records in Charon. (Optional)"))
     organize_flowcell.add_argument("-w", "--sequencing-facility", default="NGI-S", choices=('NGI-S', 'NGI-U'),
             help="The facility where sequencing was performed.")
-    organize_flowcell.add_argument("-b", "--best_practice_analysis", default="whole_genome_reseq",
+    organize_flowcell.add_argument("-b", "--best_practice_analysis", default="wgs_germline",
             help="The best practice analysis to run for this project or projects.")
+    organize_flowcell.add_argument("--pipeline", default="sarek",
+            help="The pipeline to execute for this project or projects.")
+    organize_flowcell.add_argument("--reference", default="GRCh38",
+            help="The reference genome to use for this project or projects.")
     organize_flowcell.add_argument("-f", "--force", dest="force_update", action="store_true",
             help="Force updating Charon projects. Danger danger danger. This will overwrite things.")
     organize_flowcell.add_argument("-s", "--sample", dest="restrict_to_samples", action="append",
@@ -217,6 +221,8 @@ if __name__ == "__main__":
             try:
                 create_charon_entries_from_project(project=project,
                                                    best_practice_analysis=args.best_practice_analysis,
+                                                   pipeline=args.pipeline,
+                                                   reference=args.reference,
                                                    sequencing_facility=args.sequencing_facility,
                                                    force_overwrite=args.force_update)
             except Exception as e:
