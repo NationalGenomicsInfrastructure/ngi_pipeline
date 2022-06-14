@@ -96,6 +96,7 @@ class TestAnalysisTracker(unittest.TestCase):
             setattr(tracker.analysis_entry, key, val)
 
         expected_exit_code_path = "this-is-a-path"
+        tracker.analysis_sample.project_analysis_exit_code_path.return_value = expected_exit_code_path
         tracker.analysis_sample.sample_analysis_exit_code_path.return_value = expected_exit_code_path
 
         expected_status = ProcessRunning
