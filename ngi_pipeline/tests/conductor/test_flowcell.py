@@ -79,34 +79,90 @@ class TestFlowcell(unittest.TestCase):
         self.assertEqual(expected_project, got_project.name)
 
     def test_parse_flowcell(self):
+
+        def _setup_sample_dir(project_dir, sample_id, sample_num, sample_name=None):
+            sample_dir = os.path.join(project_dir, f"Sample_{sample_id}")
+            os.makedirs(sample_dir, exist_ok=True)
+            sample_name = sample_name or f"{sample_id}-S"
+            fqfiles = [f"{sample_name}_S{sample_num}_L00{lane}_R{rd}_001.fastq.gz"
+                for lane in (1, 2, 3) for rd in (1, 2)]
+            for fqfile in fqfiles:
+                open(os.path.join(sample_dir, fqfile), 'w').close()
+            return {
+                "sample_dir": os.path.basename(sample_dir),
+                "sample_id": sample_id,
+                "sample_name": sample_name,
+                "files": fqfiles
+            }
+
+        def _setup_project_dir(base_path, project_original_name, samples):
+            project_dir = os.path.join(base_path, project_original_name.replace('.', '__'))
+            os.makedirs(project_dir, exist_ok=True)
+            sample_data = [
+                _setup_sample_dir(project_dir, sample["id"], num, sample.get("name"))
+                for num, sample in enumerate(samples)]
+            return {
+                "data_dir": os.path.basename(base_path),
+                "project_dir": os.path.basename(project_dir),
+                "project_name": project_original_name.replace('__', '.'),
+                "project_original_name": project_original_name,
+                "samples": sample_data
+            }
+
+        def _setup_flowcell_dir(base_path, flowcell):
+            fc_dir = os.path.join(self.tmp_dir, flowcell)
+            samplesheet_path = os.path.join(fc_dir, 'SampleSheet.csv')
+
+            # Set up tmp dir
+            os.mkdir(fc_dir)
+            open(samplesheet_path, 'w').close()
+
+            return {
+                "fc_dir": fc_dir,
+                "fc_full_id": flowcell,
+                "samplesheet_path": samplesheet_path,
+                "projects": []
+            }
+
         flowcell = '201103_A00187_0332_AHFCFLDSXX'
-        fc_dir = os.path.join(self.tmp_dir, flowcell)
-        samplesheet_path = os.path.join(fc_dir, 'SampleSheet.csv')
+        fc_data = _setup_flowcell_dir(self.tmp_dir, flowcell)
+        data_dir = os.path.join(fc_data["fc_dir"], "Demultiplexing")
 
-        # Set up tmp dir 
-        os.mkdir(fc_dir)
-        open(samplesheet_path, 'w').close()
-        os.makedirs(os.path.join(fc_dir, 
-                                 'Demultiplexing', 
-                                 'S__One_20_01', 
-                                 'P12345_1001'))
+        projects = [
+            {
+                "project_name": "S__One_20_01",
+                "samples": [
+                    {
+                        "id": "P12345_1101"}]},
+            {
+                "project_name": "T.Two_20_01",
+                "samples": [
+                    {
+                        "id": "P345_1201",
+                        "name": "P345_120"},
+                    {
+                        "id": "P345_1202",
+                        "name": "P345_120"
+                    }]},
+            {
+                "project_name": "AB-1234",
+                "samples": [
+                    {
+                        "id": "AB-1234-101",
+                        "name": "AB-1234-101"
+                    },
+                    {
+                        "id": "AB-1234-101-2",
+                        "name": "AB-1234-101"
+                    },
+                    {
+                        "id": "AB-1234-102"
+                    }]}]
 
-        # Expected data
-        projects = {'data_dir': 'Demultiplexing',
-                    'project_dir': 'S__One_20_01',
-                    'project_name': 'S.One_20_01',
-                    'project_original_name': 'S__One_20_01',
-                    'samples': [{'sample_dir': 'P12345_1001',
-                                'sample_name': 'P12345_1001',
-                                'files': []
-                                }]
-                    }
+        for project in projects:
+            fc_data["projects"].append(
+                _setup_project_dir(data_dir, project["project_name"], project["samples"]))
 
-        expected_info = {'fc_dir': fc_dir,
-                         'fc_full_id': flowcell,
-                         'projects': [projects],
-                         'samplesheet_path': samplesheet_path}
         # Get data
-        got_info = parse_flowcell(fc_dir)
-        
-        self.assertEqual(expected_info, got_info)
+        got_info = parse_flowcell(fc_data["fc_dir"])
+        self.assertCountEqual(fc_data, got_info)
