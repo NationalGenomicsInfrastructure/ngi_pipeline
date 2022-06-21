@@ -253,6 +253,15 @@ class SarekAnalysis(object):
         return True
 
     def analyze_project(self, analysis_object, batch_analysis=True):
+        """
+        Start the analysis of the samples in the supplied NGIAnalysis object.
+
+        :param analysis_object: a NGIAnalysis object containing the project and smaples to be
+        analyzed as well as details for the analysis
+        :param batch_analysis: boolean indicating whether analysis should be started as a single
+        batch that includes all samples or for each sample individually
+        :return: None
+        """
         analysis_samples = []
         for sample_object in analysis_object.project:
             try:
@@ -263,21 +272,21 @@ class SarekAnalysis(object):
             except SampleNotValidForAnalysisError as e:
                 analysis_object.log.error(e)
 
-        self.start_analysis(analysis_samples=analysis_samples, batch_analysis=batch_analysis)
+        self.start_analysis(
+            analysis_samples=analysis_samples,
+            batch_analysis=batch_analysis)
 
     def analyze_sample(self, sample_object, analysis_object):
         """
-        Start the analysis for the supplied NGISample object and with the analysis details contained within the supplied
-        NGIAnalysis object. If analysis is successfully started, will record the analysis in the local tracking
-        database.
+        Convert the supplied NGISample and NGIAnalysis object to a SarekAnalysisSample object.
 
-        Before starting, the status of the sample will be checked against the restart options in the analysis object.
+        The status of the sample will be checked against the restart options in the analysis object.
 
-        :raises: a SampleNotValidForAnalysisError if the sample is not eligible for analysis based on its status and the
-        analysis options in the NGIAnalysis object
+        :raises: a SampleNotValidForAnalysisError if the sample is not eligible for analysis based
+        on its status and the analysis options in the NGIAnalysis object
         :param sample_object: a NGISample object representing the sample to start analysis for
         :param analysis_object: a NGIAnalysis object containing the details for the analysis
-        :return: None
+        :return: a SarekAnalysisSample representing the sample object and analysis options
         """
 
         analysis_sample = SarekAnalysisSample(
@@ -297,7 +306,19 @@ class SarekAnalysis(object):
         return analysis_sample
 
     def start_analysis(self, analysis_samples, batch_analysis=False):
+        """
+        Start the analysis for the supplied list of SarekAnalysisSample objects. If batch_analysis
+        is True, all samples will be started together at the project level, in one batch.
+        Otherwise, the samples will be started and handled individually. Regardless of the batch
+        mode, if analysis is successfully started, the analysis will be recorded for each sample in
+        the local tracking database.
 
+        :param analysis_samples: a list of SarekAnalysisSample objects representing the samples
+        and corresponding analysis parameters to start analysis for
+        :param batch_analysis: boolean indicating whether analysis should be started as a single
+        batch that includes all samples or for each sample individually
+        :return: None
+        """
         pid = None
         for analysis_sample in analysis_samples:
             cmd = self.command_line(analysis_sample, batch_analysis=batch_analysis)
