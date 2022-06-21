@@ -319,38 +319,42 @@ class SarekAnalysis(object):
         batch that includes all samples or for each sample individually
         :return: None
         """
-        pid = None
-        for analysis_sample in analysis_samples:
-            cmd = self.command_line(analysis_sample, batch_analysis=batch_analysis)
+        def _start_job(cmd, workdir, exit_code_path, job_name):
+            pid = self.process_connector.execute_process(
+                cmd,
+                working_dir=workdir,
+                exit_code_path=exit_code_path,
+                job_name=job_name)
+            self.log.info(
+                "launched '{}', with {}, pid: {}".format(
+                    cmd, type(self.process_connector), pid))
+            return pid
 
-            # if batching the analysis, only do this once (when pid is unset)
-            if batch_analysis:
-                if pid is None:
-                    self.create_project_tsv_file(analysis_samples)
-                    workdir = analysis_sample.project_analysis_path()
-                    exit_code_path = analysis_sample.project_analysis_exit_code_path()
-                    job_name = "{}-{}".format(
-                        analysis_sample.projectid,
-                        str(self))
-            else:
-                self.create_tsv_file(analysis_sample)
-                workdir = analysis_sample.sample_analysis_path()
-                exit_code_path = analysis_sample.sample_analysis_exit_code_path()
-                job_name = "{}-{}-{}".format(
+        def _start_batch():
+            self.create_project_tsv_file(analysis_samples)
+            return _start_job(
+                self.command_line(analysis_samples[0], batch_analysis=batch_analysis),
+                analysis_samples[0].project_analysis_path(),
+                analysis_samples[0].project_analysis_exit_code_path(),
+                "{}-{}".format(
+                    analysis_samples[0].projectid,
+                    str(self))
+            )
+
+        def _start_single_sample(analysis_sample):
+            self.create_tsv_file(analysis_sample)
+            return _start_job(
+                self.command_line(analysis_sample, batch_analysis=batch_analysis),
+                analysis_sample.sample_analysis_path(),
+                analysis_sample.sample_analysis_exit_code_path(),
+                "{}-{}-{}".format(
                     analysis_sample.projectid,
                     analysis_sample.sampleid,
-                    str(self))
+                    str(self)))
 
-            # if batching the analysis, only do this once (when pid is unset)
-            if not batch_analysis or pid is None:
-                pid = self.process_connector.execute_process(
-                    cmd,
-                    working_dir=workdir,
-                    exit_code_path=exit_code_path,
-                    job_name=job_name)
-                self.log.info(
-                    "launched '{}', with {}, pid: {}".format(
-                        cmd, type(self.process_connector), pid))
+        pid = _start_batch() if batch_analysis else None
+        for analysis_sample in analysis_samples:
+            pid = _start_single_sample(analysis_sample) if not batch_analysis else pid
 
             # record the analysis details in the local tracking database
             self.tracking_connector.record_process_sample(
