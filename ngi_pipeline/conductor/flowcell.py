@@ -114,11 +114,14 @@ def match_fastq_sample_number_to_samplesheet(fastq_file, samplesheet_sample_numb
         samnple_name, sample_num, lane_num = re.match(
             r'([\w-]+)_(S\d+)_L(\d{3})_\w+',
             os.path.basename(fastq_file)).groups()
-        return list(filter(
+        return next(filter(
             lambda s: _is_a_match(s, project_id, samnple_name, lane_num, sample_num),
-            samplesheet_sample_numbers))[0]
+            samplesheet_sample_numbers))
     except AttributeError:
         # the sample and lane numbers could not be identified in fastq file name
+        pass
+    except StopIteration:
+        # the sample number and lane number could not be matched to any samplesheet_sample_number
         pass
     except IndexError:
         # the sample number and lane number could not be matched to any samplesheet_sample_number
@@ -396,10 +399,15 @@ def parse_flowcell(fc_dir):
         for sample_dir in glob.glob(sample_dir_pattern):
             LOG.info('Parsing samples directory "{}"...'.format(sample_dir.split(
                                                 os.path.split(fc_dir)[0] + "/")[1]))
-            sample_name = os.path.basename(sample_dir).replace('Sample_', '')
+            sample_id = os.path.basename(sample_dir).replace('Sample_', '')
             fastq_file_pattern = os.path.join(sample_dir, "*.fastq.gz")
             fastq_files = [os.path.basename(fq) for fq in glob.glob(fastq_file_pattern)]
+            sample_name = set(
+                map(
+                    lambda f: re.match(r'([\w-]+)_S\d+_L\d{3}_[RI]\d+_', f).group(1),
+                    fastq_files)).pop()
             project_samples.append({'sample_dir': os.path.basename(sample_dir),
+                                    'sample_id': sample_id,
                                     'sample_name': sample_name,
                                     'files': fastq_files})
         if not project_samples:
