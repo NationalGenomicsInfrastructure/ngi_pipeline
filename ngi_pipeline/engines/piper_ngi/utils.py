@@ -116,7 +116,7 @@ def remove_previous_genotype_analyses(project_obj):
             except OSError as e:
                 errors.append("{}: {}".format(sample_file, e))
         if errors:
-            LOG.warn("Error when removing one or more files: {}".format("\n".join(errors)))
+            LOG.warning("Error when removing one or more files: {}".format("\n".join(errors)))
     else:
         LOG.debug('No genotype analysis files found to delete for project {} '
                   '/ samples {}'.format(project_obj, ", ".join(project_obj.samples)))
@@ -135,7 +135,7 @@ def remove_previous_sample_analyses(project_obj, sample_obj=None):
     """
     sample_files = find_previous_sample_analyses(project_obj, sample_obj=sample_obj, include_genotype_files=False)
     if sample_files:
-        LOG.info("Deleting files for samples {}".format(sample_obj or project.obj.samples))
+        LOG.info("Deleting files for samples {}".format(sample_obj or project_obj.samples))
         errors = []
         for sample_file in sample_files:
             LOG.info("Deleting file {}".format(sample_file))
@@ -147,7 +147,7 @@ def remove_previous_sample_analyses(project_obj, sample_obj=None):
             except OSError as e:
                 errors.append("{}: {}".format(sample_file, e))
         if errors:
-            LOG.warn("Error when removing one or more files: {}".format("\n".join(errors)))
+            LOG.warning("Error when removing one or more files: {}".format("\n".join(errors)))
     else:
         LOG.debug('No sample analysis files found to delete for project {} '
                   '/ samples {}'.format(project_obj, ", ".join(project_obj.samples)))
@@ -182,8 +182,7 @@ def find_previous_sample_analyses(project_obj, sample_obj=None, include_genotype
                                                    ".{}.*.fail".format(piper_sample_name))))
     # Include genotype files?
     if not include_genotype_files:
-        sample_files = filter(lambda x: not fnmatch.fnmatch(x, "*genotype_concordance*"),
-                              sample_files)
+        sample_files = [x for x in sample_files if not fnmatch.fnmatch(x, "*genotype_concordance*")]
 
     return sample_files
 

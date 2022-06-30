@@ -9,6 +9,7 @@ import requests
 from ngi_pipeline.database.utils import load_charon_variables
 from ngi_pipeline.log.loggers import minimal_logger
 from requests.exceptions import Timeout
+import six
 
 LOG = minimal_logger(__name__)
 
@@ -20,10 +21,8 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-class CharonSession(requests.Session):
-    # Yeah that's right, I'm using __metaclass__
-    # I even looked up how to do it on StackOverflow all by myself
-    __metaclass__ = Singleton
+class CharonSession(six.with_metaclass(Singleton, requests.Session)):
+    
     def __init__(self, config=None, config_file_path=None):
         super(CharonSession, self).__init__()
 
@@ -41,16 +40,16 @@ class CharonSession(requests.Session):
             raise ValueError('Unable to load needed Charon variable: {}'.format(e))
 
         self.get = validate_response(functools.partial(self.get,
-                    headers=self._api_token_dict, timeout=3))
+                    headers=self._api_token_dict, timeout=10))
         self.post = validate_response(functools.partial(self.post,
-                    headers=self._api_token_dict, timeout=3))
+                    headers=self._api_token_dict, timeout=10))
         self.put = validate_response(functools.partial(self.put,
-                    headers=self._api_token_dict, timeout=3))
+                    headers=self._api_token_dict, timeout=10))
         self.delete = validate_response(functools.partial(self.delete,
-                    headers=self._api_token_dict, timeout=3))
+                    headers=self._api_token_dict, timeout=10))
 
         self._project_params = ('projectid', 'name', 'status', 'best_practice_analysis',
-                                'sequencing_facility', 'delivery_status')
+                                'sequencing_facility', 'delivery_status', 'delivery_token', 'delivery_projects')
         self._project_reset_params = tuple(set(self._project_params) - \
                                            set(['projectid', 'name',
                                                 'best_practice_analysis',
@@ -58,7 +57,7 @@ class CharonSession(requests.Session):
         self._sample_params = ('sampleid', 'status', 'analysis_status', 'qc_status',
                                'genotype_status', 'genotype_concordance',
                                'total_autosomal_coverage', 'total_sequenced_reads',
-                               'delivery_status', 'duplication_pc', 'type', 'pair')
+                               'delivery_status', 'duplication_pc', 'type', 'pair','delivery_token', 'delivery_projects')
         self._sample_reset_params = tuple(set(self._sample_params) - \
                                           set(['sampleid', 'total_sequenced_reads']))
         self._libprep_params = ('libprepid', 'qc')
@@ -96,7 +95,7 @@ class CharonSession(requests.Session):
         return self.get(self.construct_charon_url('samples', projectid)).json()
 
     def project_update(self, projectid, name=None, status=None, best_practice_analysis=None,
-                       sequencing_facility=None, delivery_status=None):
+                       sequencing_facility=None, delivery_status=None, delivery_token=None, delivery_projects=None):
         l_dict = locals()
         data = { k: l_dict.get(k) for k in self._project_params if l_dict.get(k)}
         return self.put(self.construct_charon_url('project', projectid),
@@ -136,7 +135,7 @@ class CharonSession(requests.Session):
     def sample_update(self, projectid, sampleid, status=None, analysis_status=None,
                       qc_status=None, genotype_status=None,
                       genotype_concordance=None, total_autosomal_coverage=None,
-                      total_sequenced_reads=None, delivery_status=None, duplication_pc=None):
+                      total_sequenced_reads=None, delivery_status=None, duplication_pc=None, delivery_token=None, delivery_projects=None ):
         url = self.construct_charon_url("sample", projectid, sampleid)
         l_dict = locals()
         data = { k: l_dict.get(k) for k in self._sample_params if l_dict.get(k)}
@@ -197,7 +196,7 @@ class CharonSession(requests.Session):
                       genotype_status=None, runid=None, total_reads=None,
                       mean_autosomal_coverage=None, *args, **kwargs):
         if args: LOG.debug("Ignoring extra args: {}".format(", ".join(*args)))
-        if kwargs: LOG.debug("Ignoring extra kwargs: {}".format(", ".join(["{}: {}".format(k,v) for k,v in kwargs.iteritems()])))
+        if kwargs: LOG.debug("Ignoring extra kwargs: {}".format(", ".join(["{}: {}".format(k,v) for k,v in kwargs.items()])))
         url = self.construct_charon_url("seqrun", projectid, sampleid, libprepid, seqrunid)
         l_dict = locals()
         data = { k: str(l_dict.get(k)) for k in self._seqrun_params if l_dict.get(k)}

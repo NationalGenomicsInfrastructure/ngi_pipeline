@@ -7,15 +7,24 @@ The README describes the content of the delivered data.
 Root level
 ----------
 The root folder, which is named by the project id, contains one report folder
-and one folder for each sample.
+and one folder for each sample. Each sample folder is accompanied by a .lst-file
+containing a list of the files in the folder and a .md5-file containing the
+MD5-checksums of the files in the folder. Use the MD5-checksums to verify the
+integrity of the files after transfer.
 
 |--ProjectID
    |--00-Report
    |--Sample1
+   |--Sample1.lst
+   |--Sample1.md5
    |--Sample2
+   |--Sample2.lst
+   |--Sample2.md5
    ...
    ...
    |--SampleN
+   |--SampleN.lst
+   |--SampleN.md5
 
 ====================================================================
 ProjectID -> 00-Report

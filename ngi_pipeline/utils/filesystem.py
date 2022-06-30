@@ -19,6 +19,8 @@ from ngi_pipeline.log.loggers import minimal_logger
 from ngi_pipeline.utils.classes import with_ngi_config
 
 from requests.exceptions import Timeout
+from six.moves import map
+from six.moves import filter
 
 
 LOG = minimal_logger(__name__)
@@ -48,7 +50,7 @@ def load_modules(modules_list, config=None, config_file_path=None):
         stdout,stderr = p.communicate()
         try:
             assert(stdout), stderr
-            exec stdout
+            exec(stdout)
         except Exception as e:
             error_msg = "Error loading module {}: {}".format(module, e)
             error_msgs.append(error_msg)
@@ -148,7 +150,7 @@ def execute_command_line(cl, shell=False, stdout=None, stderr=None, cwd=None):
     :raises RuntimeError: If the OS command-line execution failed.
     """
     if cwd and not os.path.isdir(cwd):
-        LOG.warn("CWD specified, \"{}\", is not a valid directory for "
+        LOG.warning("CWD specified, \"{}\", is not a valid directory for "
                  "command \"{}\". Setting to None.".format(cwd, cl))
         ## FIXME Better to just raise an exception
         cwd = None
@@ -162,7 +164,8 @@ def execute_command_line(cl, shell=False, stdout=None, stderr=None, cwd=None):
         p_handle = subprocess.Popen(cl, stdout=stdout,
                                         stderr=stderr,
                                         cwd=cwd,
-                                        shell=shell)
+                                        shell=shell,
+                                        universal_newlines=True)
         error_msg = None
     except OSError:
         error_msg = ("Cannot execute command; missing executable on the path? "
@@ -193,21 +196,6 @@ def do_link(src_files, dst_dir, link_type='soft'):
         dst_file = os.path.join(dst_dir, base_file)
         if not os.path.isfile(dst_file):
             link_f(os.path.realpath(src_file), dst_file)
-
-
-def do_rsync(src_files, dst_dir):
-    ## TODO I changed this -c because it takes for goddamn ever but I'll set it back once in Production
-    #cl = ["rsync", "-car"]
-    cl = ["rsync", "-av"]
-    cl.extend(src_files)
-    cl.append(dst_dir)
-    cl = map(str, cl)
-    # Use for testing: just touch the files rather than copy them
-    #for f in src_files:
-    #    open(os.path.join(dst_dir,os.path.basename(f)),"w").close()
-    subprocess.check_call(cl)
-    #execute_command_line(cl)
-    return [ os.path.join(dst_dir,os.path.basename(f)) for f in src_files ]
 
 
 def safe_makedir(dname, mode=0o2770):
@@ -251,23 +239,6 @@ def rotate_file(file_path, new_subdirectory="rotated_files"):
                           '{}'.format(file_path, rotate_file_path, e))
 
 @contextlib.contextmanager
-def curdir_tmpdir(remove=True):
-    """Context manager to create and remove a temporary directory.
-    """
-    tmp_dir_base = os.path.join(os.getcwd(), "tmp")
-    safe_makedir(tmp_dir_base)
-    tmp_dir = tempfile.mkdtemp(dir=tmp_dir_base)
-    safe_makedir(tmp_dir)
-    # Explicitly change the permissions on the temp directory to make it writable by group
-    os.chmod(tmp_dir, stat.S_IRWXU | stat.S_IRWXG)
-    try:
-        yield tmp_dir
-    finally:
-        if remove:
-            shutil.rmtree(tmp_dir)
-
-
-@contextlib.contextmanager
 def chdir(new_dir):
     """Context manager to temporarily change to a new directory.
     """
@@ -285,7 +256,6 @@ def recreate_project_from_filesystem(project_dir,
                                      restrict_to_samples=None,
                                      restrict_to_libpreps=None,
                                      restrict_to_seqruns=None,
-                                     force_create_project=False,
                                      config=None, config_file_path=None):
     """Recreates the full project/sample/libprep/seqrun set of
     NGIObjects using the directory tree structure."""
@@ -305,7 +275,7 @@ def recreate_project_from_filesystem(project_dir,
     else:
         real_project_dir = os.path.abspath(project_dir)
         search_dir = os.path.join(os.path.dirname(project_dir), "*")
-        sym_files = filter(os.path.islink, glob.glob(search_dir))
+        sym_files = list(filter(os.path.islink, glob.glob(search_dir)))
         for sym_file in sym_files:
             if os.path.realpath(sym_file) == os.path.realpath(real_project_dir):
                 syml_project_dir = os.path.abspath(sym_file)
@@ -325,9 +295,9 @@ def recreate_project_from_filesystem(project_dir,
                              project_id=project_id,
                              base_path=project_base_path)
     samples_pattern = os.path.join(real_project_dir, "*")
-    samples = filter(os.path.isdir, glob.glob(samples_pattern))
+    samples = list(filter(os.path.isdir, glob.glob(samples_pattern)))
     if not samples:
-        LOG.warn('No samples found for project "{}"'.format(project_obj))
+        LOG.warning('No samples found for project "{}"'.format(project_obj))
     for sample_dir in samples:
         sample_name = os.path.basename(sample_dir)
         if restrict_to_samples and sample_name not in restrict_to_samples:
@@ -338,9 +308,9 @@ def recreate_project_from_filesystem(project_dir,
         sample_obj = project_obj.add_sample(name=sample_name, dirname=sample_name)
 
         libpreps_pattern = os.path.join(sample_dir, "*")
-        libpreps = filter(os.path.isdir, glob.glob(libpreps_pattern))
+        libpreps = list(filter(os.path.isdir, glob.glob(libpreps_pattern)))
         if not libpreps:
-            LOG.warn('No libpreps found for sample "{}"'.format(sample_obj))
+            LOG.warning('No libpreps found for sample "{}"'.format(sample_obj))
         for libprep_dir in libpreps:
             libprep_name = os.path.basename(libprep_dir)
             if restrict_to_libpreps and libprep_name not in restrict_to_libpreps:
@@ -352,9 +322,9 @@ def recreate_project_from_filesystem(project_dir,
                                                  dirname=libprep_name)
 
             seqruns_pattern = os.path.join(libprep_dir, "*_*_*_*")
-            seqruns = filter(os.path.isdir, glob.glob(seqruns_pattern))
+            seqruns = list(filter(os.path.isdir, glob.glob(seqruns_pattern)))
             if not seqruns:
-                LOG.warn('No seqruns found for libprep "{}"'.format(libprep_obj))
+                LOG.warning('No seqruns found for libprep "{}"'.format(libprep_obj))
             for seqrun_dir in seqruns:
                 seqrun_name = os.path.basename(seqrun_dir)
                 if restrict_to_seqruns and seqrun_name not in restrict_to_seqruns:
@@ -369,6 +339,18 @@ def recreate_project_from_filesystem(project_dir,
                     LOG.info('Adding fastq file "{}" to seqrun "{}"'.format(fq_name, seqrun_obj))
                     seqrun_obj.add_fastq_files([fq_name])
     return project_obj
+
+
+def is_index_file(fastq_file, index_file_pattern=r'_L00\d_I\d_'):
+    """
+    Returns True if the fastq file appears to be an index file, based on the file name pattern
+
+    :param fastq_file: the file name of the fastq file
+    :param index_file_pattern: a regexp pattern that discriminates index files from non-index files.
+    Will use '_L00\d_I\d_' if not specified
+    :return: True if file name matches the index file pattern, False otherwise
+    """
+    return re.search(index_file_pattern, os.path.basename(fastq_file)) is not None
 
 
 def fastq_files_under_dir(dirname, realpath=True):
@@ -390,7 +372,7 @@ def match_files_under_dir(dirname, pattern, pt_style="regex", realpath=True):
     :rtype: list
     """
     if pt_style not in ("regex", "shell"):
-        LOG.warn('Chosen pattern style "{}" invalid (must be "regex" or "shell"); '
+        LOG.warning('Chosen pattern style "{}" invalid (must be "regex" or "shell"); '
                  'falling back to "regex".')
         pt_style = "regex"
     if pt_style == "regex": pt_comp = re.compile(pattern)
@@ -405,11 +387,11 @@ def match_files_under_dir(dirname, pattern, pt_style="regex", realpath=True):
                 else:
                     matches.append(os.path.abspath(file_path))
         else: # regex-style
-            file_matches = filter(pt_comp.search, filenames)
+            file_matches = list(filter(pt_comp.search, filenames))
             file_paths = [os.path.join(root, filename) for filename in file_matches]
             if file_paths:
                 if realpath:
-                    matches.extend(map(os.path.realpath, file_paths))
+                    matches.extend(list(map(os.path.realpath, file_paths)))
                 else:
-                    matches.extend(map(os.path.abspath, file_paths))
+                    matches.extend(list(map(os.path.abspath, file_paths)))
     return matches

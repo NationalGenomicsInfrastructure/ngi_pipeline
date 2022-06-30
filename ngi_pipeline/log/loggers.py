@@ -8,10 +8,11 @@ import logging
 import os
 import sys
 
-from Queue import Queue
+from six.moves.queue import Queue
 from subprocess import Popen, PIPE
 from threading import Thread
 
+from ngi_pipeline import __version__ as version
 from ngi_pipeline.utils.classes import with_ngi_config
 
 def log_process_non_blocking(output_buffer, logging_fn):
@@ -52,7 +53,7 @@ def minimal_logger(namespace, to_file=True, debug=False,
 
     # Console logger
     s_h = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - v%(version)s - %(name)s - %(levelname)s - %(message)s')
     s_h.setFormatter(formatter)
     s_h.setLevel(log_level)
     log.addHandler(s_h)
@@ -74,4 +75,4 @@ def minimal_logger(namespace, to_file=True, debug=False,
             fh.setLevel(log_level)
             fh.setFormatter(formatter)
             log.addHandler(fh)
-    return log
+    return logging.LoggerAdapter(log, {'version': version})
