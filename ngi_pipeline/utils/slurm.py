@@ -4,6 +4,7 @@ import shlex
 import subprocess
 
 from ngi_pipeline.log.loggers import minimal_logger
+from six.moves import map
 
 
 LOG = minimal_logger(__name__)
@@ -64,7 +65,7 @@ def get_slurm_job_status(slurm_job_id):
     except ValueError:
         raise TypeError("SLURM Job ID not an integer: {}".format(slurm_job_id))
     LOG.debug('Checking slurm job status with cl "{}"...'.format(check_cl))
-    job_status = subprocess.check_output(shlex.split(check_cl))
+    job_status = subprocess.check_output(shlex.split(check_cl)).decode("utf-8")
     LOG.debug('job status for job {} is "{}"'.format(slurm_job_id, job_status.strip()))
     if not job_status:
         raise ValueError("No such slurm job found: {}".format(slurm_job_id))
@@ -86,7 +87,7 @@ def slurm_time_to_seconds(slurm_time_str):
     """
     try:
         days, time = slurm_time_str.split("-")
-        hours, minutes, seconds = map(int, time.split(":"))
+        hours, minutes, seconds = list(map(int, time.split(":")))
         hours += int(days) * 24
         minutes += hours * 60
         seconds += minutes * 60

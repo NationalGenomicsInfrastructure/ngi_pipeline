@@ -1,5 +1,9 @@
 ![NGI Pipeline mascot, Mr. Splash](artwork/gh-splash.png)
 
+[![Build Status](https://travis-ci.org/NationalGenomicsInfrastructure/ngi_pipeline.svg?branch=master)](https://travis-ci.org/NationalGenomicsInfrastructure/ngi_pipeline)
+[![Maintainability](https://api.codeclimate.com/v1/badges/6988dea77881c498ad78/maintainability)](https://codeclimate.com/github/NationalGenomicsInfrastructure/ngi_pipeline/maintainability)
+[![codecov](https://codecov.io/gh/NationalGenomicsInfrastructure/ngi_pipeline/branch/master/graph/badge.svg)](https://codecov.io/gh/NationalGenomicsInfrastructure/ngi_pipeline)
+
 Software designed to take demultiplexed Illumina flowcells and shove 'em through an analysis pipeline (e.g. Piper/GATK).
 
 Nota bene
@@ -157,3 +161,37 @@ In the case a sample failed you can force the re-run:
 
     ngi_pipeline_start.py analyze project —-sample P1170_105 --restart-failed /proj/a2014205/nobackup/NGI/analysis_ready/DATA/M.Kaller_14_05/
 
+
+Config file for scripts/gt_concordance.py
+-------------------------
+By default the script uses default ngi_pipeline config file. However, it requires some additional paramenters. Or, alternatively, can take a separate config file as `--config/-c` argument.
+
+Any of those options require section 'gt_concordance' containing the following parameters:
+
+```
+gt_concordance:
+    XL_FILES_PATH: /lupus/proj/ngi2016003/genotype_data/incoming
+    XL_FILES_ARCHIVED:  /lupus/proj/ngi2016003/genotype_data/archived
+
+    GATK_PATH: /sw/apps/bioinfo/GATK/3.5.0/GenomeAnalysisTK.jar
+    GATK_REF_FILE: /sw/data/uppnex/reference/biodata/GATK/ftp.broadinstitute.org/bundle/2.8/b37/human_g1k_v37.fasta
+    GATK_VAR_FILE: /sw/data/uppnex/reference/biodata/GATK/ftp.broadinstitute.org/bundle/2.8/b37/dbsnp_138.b37.vcf
+    INTERVAL_FILE: /lupus/proj/ngi2016003/genotype_data/static/snps.interval_list
+    SNPS_FILE: /lupus/proj/ngi2016003/genotype_data/static/maf_snps.txt
+
+    # this one is only required for a custom config file (not ngi_config)
+    ANALYSIS_PATH: /proj/ngi2016003/nobackup/NGI/ANALYSIS
+```
+
+Docker/Singularity image
+========================
+A recipe for building Docker and Singularity containers is provided in the `docker` subdirectory. This image is mainly 
+useful for development as it enables testing the code in an isolated environment. 
+
+To build the Docker and Singularity images, run the `docker/build_docker_and_singularity.sh` script.
+
+To invoke the `ngi_pipeline` in a Singularity image on Irma, use (and modify as needed) the 
+`docker/singularity_ngi_pipeline.sh` wrapper.
+
+Note that when running in containers, the pipeline will not be able to access e.g. the SLURM scheduler, so you won't be 
+able to actually launch analyses that are managed by Slurm.

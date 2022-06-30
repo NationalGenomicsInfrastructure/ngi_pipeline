@@ -10,7 +10,7 @@ from ngi_pipeline.utils.classes import with_ngi_config
 from ngi_pipeline.engines.utils import handle_sample_status, handle_libprep_status, handle_seqrun_status
 from ngi_pipeline.database.classes import CharonSession, CharonError
 from ngi_pipeline.utils.filesystem import load_modules, execute_command_line, \
-                                          safe_makedir, do_symlink
+                                          safe_makedir, do_symlink, is_index_file
                                           
 
 
@@ -56,7 +56,8 @@ def analyze(analysis_object, config=None, config_file_path=None):
                         else:
                             seqrun.being_analyzed=True
                             sample.being_analyzed = sample.being_analyzed or True
-                            for fastq_file in seqrun.fastq_files:
+                            # filter out index files from analysis
+                            for fastq_file in [f for f in seqrun.fastq_files if not is_index_file(f)]:
                                 fastq_path=os.path.join(analysis_object.project.base_path, "DATA", analysis_object.project.project_id, sample.name, libprep.name, seqrun.name, fastq_file)
                                 fastq_files.append(fastq_path)
         

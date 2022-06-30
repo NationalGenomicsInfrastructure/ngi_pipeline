@@ -1,0 +1,17 @@
+analysis:
+    best_practice_analysis:
+        wgs_germline:
+            analysis_engine: ngi_pipeline.engines.sarek
+
+    top_dir: /some/dir
+    sthlm_root: ngi2016003
+    base_root: /some/dir
+
+database:
+    record_tracking_db_path: /some/other/dir
+
+logging:
+    log_file: /some/log/file.log
+
+mail:
+    recipient: some_user@some_email.com
