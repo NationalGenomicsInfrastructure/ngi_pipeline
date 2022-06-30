@@ -40,10 +40,7 @@ from ngi_pipeline.utils.filesystem import load_modules, execute_command_line, \
                                           rotate_file, safe_makedir, \
                                           match_files_under_dir
 from ngi_pipeline.utils.classes import with_ngi_config
-from ngi_pipeline.utils.filesystem import fastq_files_under_dir
-from ngi_pipeline.utils.parsers import parse_lane_from_filename, \
-                                       find_fastq_read_pairs_from_dir, \
-                                       get_flowcell_id_from_dirtree
+from ngi_pipeline.utils.filesystem import fastq_files_under_dir, is_index_file
 from ngi_pipeline.utils.slurm import get_slurm_job_status
 
 LOG = minimal_logger(__name__)
@@ -73,7 +70,7 @@ def analyze(analysis_object, level='sample', config=None, config_file_path=None)
         elif level == "genotype":
             status_field = "genotype_status"
         else:
-            LOG.warn('Unknown workflow level: "{}"'.format(level))
+            LOG.warning('Unknown workflow level: "{}"'.format(level))
             status_field = "alignment_status" # Or should we abort?
         try:
             check_for_preexisting_sample_runs(analysis_object.project, sample, analysis_object.restart_running_jobs,
@@ -128,13 +125,11 @@ def analyze(analysis_object, level='sample', config=None, config_file_path=None)
                                                                 project_id=analysis_object.project.project_id,
                                                                 sample_id=sample.name)
                     if level == "sample":
-                        if not analysis_object.keep_existing_data:
-                            remove_previous_sample_analyses(analysis_object.project, sample)
-                            default_files_to_copy=None
+                        remove_previous_sample_analyses(analysis_object.project, sample)
+                        default_files_to_copy=None
                     elif level == "genotype":
-                        if not analysis_object.keep_existing_data:
-                            remove_previous_genotype_analyses(analysis_object.project)
-                            default_files_to_copy=None
+                        remove_previous_genotype_analyses(analysis_object.project)
+                        default_files_to_copy=None
 
                     # Update the project to keep only valid fastq files for setup.xml creation
                     if level == "genotype":
@@ -159,8 +154,7 @@ def analyze(analysis_object, level='sample', config=None, config_file_path=None)
                                               setup_xml_path=setup_xml_path,
                                               exit_code_path=exit_code_path,
                                               config=analysis_object.config,
-                                              exec_mode=analysis_object.exec_mode,
-                                              generate_bqsr_bam=analysis_object.generate_bqsr_bam)
+                                              exec_mode=analysis_object.exec_mode)
                     if analysis_object.exec_mode == "sbatch":
                         process_id = None
                         slurm_job_id = sbatch_piper_sample([setup_xml_cl, piper_cl],
@@ -168,7 +162,7 @@ def analyze(analysis_object, level='sample', config=None, config_file_path=None)
                                                            analysis_object.project, sample,
                                                            restart_finished_jobs=analysis_object.restart_finished_jobs,
                                                            files_to_copy=default_files_to_copy)
-                        for x in xrange(10):
+                        for x in range(10):
                             # Time delay to let sbatch get its act together
                             # (takes a few seconds to be visible with sacct)
                             try:
@@ -256,7 +250,8 @@ def collect_files_for_sample_analysis(project_obj, sample_obj,
     proj_obj = NGIProject(project_obj.name, project_obj.dirname,
                           project_obj.project_id, project_obj.base_path)
     sample_obj = proj_obj.add_sample(sample_obj.name, sample_obj.dirname)
-    for fastq_path in fastq_files_on_filesystem:
+    # filter out index files from the analysis
+    for fastq_path in [f for f in fastq_files_on_filesystem if not is_index_file(f)]:
         base_path, fastq = os.path.split(fastq_path)
         if not fastq:
             base_path, fastq = os.path.split(base_path) # Handles trailing slash
@@ -320,7 +315,7 @@ def sbatch_piper_sample(command_line_list, workflow_name, project, sample,
                                        slurm_err_log=slurm_err_log)
     sbatch_text_list = sbatch_text.split("\n")
     sbatch_extra_params = config.get("slurm", {}).get("extra_params", {})
-    for param, value in sbatch_extra_params.iteritems():
+    for param, value in sbatch_extra_params.items():
         sbatch_text_list.append("#SBATCH {} {}\n\n".format(param, value))
     modules_to_load = config.get("piper", {}).get("load_modules", [])
     if modules_to_load:
@@ -393,10 +388,10 @@ def sbatch_piper_sample(command_line_list, workflow_name, project, sample,
     sbatch_text_list.append("\nPIPER_RETURN_CODE=$?")
 
     #Precalcuate md5sums
-    sbatch_text_list.append('MD5FILES="$SNIC_TMP/ANALYSIS/{}/piper_ngi/05_processed_alignments/*.bam'.format(project.project_id))
+    sbatch_text_list.append('MD5FILES="$SNIC_TMP/ANALYSIS/{}/piper_ngi/05_processed_alignments/*{}*.bam'.format(project.project_id,sample.name))
     sbatch_text_list.append('$SNIC_TMP/ANALYSIS/{}/piper_ngi/05_processed_alignments/*.table'.format(project.project_id))
-    sbatch_text_list.append('$SNIC_TMP/ANALYSIS/{}/piper_ngi/07_variant_calls/*.genomic.vcf.gz'.format(project.project_id))
-    sbatch_text_list.append('$SNIC_TMP/ANALYSIS/{}/piper_ngi/07_variant_calls/*.annotated.vcf.gz"'.format(project.project_id))
+    sbatch_text_list.append('$SNIC_TMP/ANALYSIS/{}/piper_ngi/07_variant_calls/*{}*.genomic.vcf.gz'.format(project.project_id,sample.name))
+    sbatch_text_list.append('$SNIC_TMP/ANALYSIS/{}/piper_ngi/07_variant_calls/*{}*.annotated.vcf.gz"'.format(project.project_id,sample.name))
     sbatch_text_list.append('for f in $MD5FILES')
     sbatch_text_list.append('do')
     sbatch_text_list.append("    md5sum $f | awk '{printf $1}' > $f.md5 &")

@@ -9,10 +9,12 @@ import subprocess
 import time
 import xml.etree.cElementTree as ET
 import xml.parsers.expat
+import json
 
 from ngi_pipeline.database.classes import CharonSession, CharonError
 from ngi_pipeline.log.loggers import minimal_logger
 from ngi_pipeline.utils.classes import memoized
+from six.moves import filter
 
 LOG = minimal_logger(__name__)
 
@@ -21,20 +23,6 @@ LOG = minimal_logger(__name__)
 STHLM_UUSNP_SEQRUN_RE = re.compile(r'(?P<project_name>\w\.\w+_\d+_\d+|\w{2}-\d+)_(?P<sample_id>[\w-]+)_(?P<libprep_id>\w|\w{2}\d{3}_\2)_(?P<seqrun_id>\d{6}_\w+_\d{4}_.{10})')
 STHLM_UUSNP_SAMPLE_RE = re.compile(r'(?P<project_name>\w\.\w+_\d+_\d+|\w{2}-\d+)_(?P<sample_id>[\w-]+)')
 
-
-def parse_samples_from_vcf(path_to_vcf):
-    path_to_vcf = path_to_vcf.strip()
-    with open(path_to_vcf, 'r') as f:
-        for line in f:
-            if line.startswith("#CHROM"):
-                break
-    header_list = line.split()
-    try:
-        samples_index = header_list.index("FORMAT")
-    except ValueError:
-        raise ValueError('Improperly formatted VCF file: cannot determine '
-                         'samples from file "{}"'.format(path_to_vcf))
-    return header_list[samples_index+1:]
 
 def determine_library_prep_from_fcid(project_id, sample_name, fcid):
     """Use the information in the database to get the library prep id
@@ -111,18 +99,97 @@ def determine_library_prep_from_samplesheet(samplesheet_path, project_id, sample
         raise ValueError(error_msg)
 
 
+def _get_and_trim_field_value(row_dict, fieldnames, trim_away_string=""):
+    """
+    Will search the supplied dict for keys matching the supplied list of fieldnames and return the value of the first
+    encountered, possibly stripped of the supplied trim_away_string
+
+    :param row_dict: a dict to search
+    :param fieldnames: a list of keys to search for
+    :param trim_away_string: if specified, any substrings in the found value matching this string will be trimmed
+    :return: the value of the first key-value pair matched or None if no matching key could be found
+    """
+    try:
+        return list(filter(
+            lambda v: v is not None,
+            [row_dict.get(k) for k in fieldnames]))[0].replace(trim_away_string, "")
+    except IndexError:
+        return None
+
+
+def _get_libprepid_from_description(description):
+    """
+    Given a description from the samplesheet (as formatted by SNP&SEQ), extract the library prep id
+
+    :param description: string with description from samplesheet
+    :return: the libprepid as a string or None if the libprepid could not be identified
+    """
+    # parameters are delimited with ';', values are indicated with ':'
+    try:
+        return list(filter(
+            lambda param: param.startswith("LIBRARY_NAME:"),
+            description.split(";")))[0].split(":")[1]
+    except IndexError:
+        return None
+
+
+def get_sample_numbers_from_samplesheet(samplesheet_path):
+    """
+    bcl2fastq will number samples based on the order they appear in the samplesheet and use this number in the
+    file name (e.g. _S1_, _S2_ etc.). This method recreates the numbering scheme.
+
+    :param samplesheet_path: path to the samplesheet
+    :return: a list of samples where each sample is a list having the elements:
+       [0] - sample number as a string, e.g. "S1"
+       [1] - project name
+       [2] - sample name
+       [3] - sample id
+       [4] - barcode sequence (separated with '-' if dual index)
+       [5] - lane number
+       [6] - library id if properly parsed from description
+    """
+    samplesheet = parse_samplesheet(samplesheet_path)
+    samples = []
+    seen_samples = []
+    for row in samplesheet:
+        ss_project_id = _get_and_trim_field_value(row, ["SampleProject", "Sample_Project", "Project"], "Project_")
+        ss_sample_name = _get_and_trim_field_value(row, ["SampleName", "Sample_Name"], "Sample_")
+        ss_sample_id = _get_and_trim_field_value(row, ["SampleID", "Sample_ID"], "Sample_")
+        ss_barcode = "-".join(
+            [x for x in [_get_and_trim_field_value(row, ["index"]),
+                         _get_and_trim_field_value(row, ["index2"])] 
+             if x is not None]
+            )
+        ss_lane_num = int(_get_and_trim_field_value(row, ["Lane"]))
+        ss_libprepid = _get_libprepid_from_description(
+            _get_and_trim_field_value(row, ["Description"]))
+        fingerprint = "-".join([ss_project_id, ss_sample_id])
+        if fingerprint not in seen_samples:
+            seen_samples.append(fingerprint)
+        ss_sample_number = seen_samples.index(fingerprint) + 1
+        samples.append([
+            "S{}".format(str(ss_sample_number)),
+            ss_project_id,
+            ss_sample_name,
+            ss_sample_id,
+            ss_barcode,
+            ss_lane_num,
+            ss_libprepid
+        ])
+    return samples
+
 @memoized
 def parse_samplesheet(samplesheet_path):
     """Parses an Illumina SampleSheet.csv and returns a list of dicts
     """
     try:
         # try opening as a gzip file (Uppsala)
-        f = gzip.open(samplesheet_path, 'rbU')
+        f = gzip.open(samplesheet_path)
         f.readline()
         f.seek(0)
     except IOError: # I would be more comfortable if this had an error code attr. Just sayin'.
         # Not gzipped
-        f = open(samplesheet_path, 'rbU')
+        f = open(samplesheet_path)
 
     # Two possible formats: simple csv and not simple weird INI/csv format
     # Okay this looks kind of bad and will probably break easily, but if you want
@@ -138,29 +205,7 @@ def parse_samplesheet(samplesheet_path):
     else:
         f.seek(0)
     return  [ row for row in csv.DictReader(f, dialect="excel", restval=None)
-              if all(map(lambda x: x is not None, row.values())) ] 
-
-
-def find_fastq_read_pairs_from_dir(directory):
-    """
-    Given the path to a directory, finds read pairs (based on _R1_/_R2_ file naming)
-    and returns a dict of {base_name: [ file_read_one, file_read_two ]}
-    Filters out files not ending with .fastq[.gz|.gzip|.bz2].
-
-    E.g. a path to a directory containing:
-        P567_102_AAAAAA_L001_R1_001.fastq.gz
-        P567_102_AAAAAA_L001_R2_001.fastq.gz
-    becomes
-        { "P567_102_AAAAAA_L001":
-           ["P567_102_AAAAAA_L001_R1_001.fastq.gz",
-            "P567_102_AAAAAA_L001_R2_001.fastq.gz"] }
-
-    :param str directory: The directory to search for fastq file pairs.
-    :returns: A dict of file_basename -> [file1, file2]
-    :rtype: dict
-    """
-    file_list = glob.glob(os.path.join(directory, "*"))
-    return find_fastq_read_pairs(file_list)
+              if all([x is not None for x in list(row.values())]) ] 
 
 
 def find_fastq_read_pairs(file_list):
@@ -183,10 +228,10 @@ def find_fastq_read_pairs(file_list):
     """
     # We only want fastq files
     pt = re.compile(".*\.(fastq|fq)(\.gz|\.gzip|\.bz2)?$")
-    file_list = filter(pt.match, file_list)
+    file_list = list(filter(pt.match, file_list))
     if not file_list:
         # No files found
-        LOG.warn("No fastq files found.")
+        LOG.warning("No fastq files found.")
         return {}
     # --> This is the SciLifeLab-Sthlm-specific format (obsolete as of August 1st, hopefully)
     #     Format: <lane>_<date>_<flowcell>_<project-sample>_<read>.fastq.gz
@@ -197,6 +242,7 @@ def find_fastq_read_pairs(file_list):
     suffix_pattern = re.compile(r'(.*)fastq')
     # Cut off at the read group
     file_format_pattern = re.compile(r'(.*)_(?:R\d|\d\.).*')
+    index_format_pattern= re.compile(r'(.*)_(?:I\d|\d\.).*')
     matches_dict = collections.defaultdict(list)
     for file_pathname in file_list:
         file_basename = os.path.basename(file_pathname)
@@ -206,81 +252,18 @@ def find_fastq_read_pairs(file_list):
             pair_base = file_format_pattern.match(file_basename).groups()[0]
             matches_dict["{}_{}".format(pair_base,fc_id)].append(file_pathname)
         except AttributeError:
-            LOG.warn("Warning: file doesn't match expected file format, "
+    
+            #look for index file - 10Xgenomics case
+            index_file = index_format_pattern.match(file_basename).groups()[0]
+            if index_file:
+                matches_dict["{}_{}".format(index_file,fc_id)].append(file_pathname)
+            else:
+                LOG.warning("Warning: file doesn't match expected file format, "
                       "cannot be paired: \"{}\"".format(file_pathname))
-            # File could not be paired, set by itself (?)
-            file_basename_stripsuffix = suffix_pattern.split(file_basename)[0]
-            matches_dict[file_basename_stripsuffix].append(os.abspath(file_pathname))
+                # File could not be paired, set by itself (?)
+                file_basename_stripsuffix = suffix_pattern.split(file_basename)[0]
+                matches_dict[file_basename_stripsuffix].append(os.path.abspath(file_pathname))
     return dict(matches_dict)
-
-
-def parse_lane_from_filename(sample_basename):
-    """Lane number is parsed from the standard filename format,
-     which is one of:
-       <sample-name>_<index>_<lane>_<read>_<group>.fastq.gz
-       e.g.
-       P567_102_AAAAAA_L001_R1_001.fastq.gz
-       (Standard Illumina format)
-    or
-       <lane_num>_<date>_<fcid>_<project>_<sample_num>_<read>.fastq[.gz]
-       e.g.
-       1_140220_AH8AMJADXX_P673_101_1.fastq.gz
-       (SciLifeLab Sthlm format, obsolete)
-
-    returns a lane as an int or raises a ValueError if there is no match
-    (which shouldn't generally happen and probably indicates a larger issue).
-
-    :param str sample_basename: The name of the file from which to pull the project id
-    :returns: (project_id, sample_id)
-    :rtype: tuple
-    :raises ValueError: If the ids cannot be determined from the filename (no regex match)
-    """
-    # Stockholm or \
-    # Illumina
-    match = re.match(r'(?P<lane>\d)_\d{6}_\w{10}_(?P<project>P\d{3})_(?P<sample>\d{3}).*', sample_basename) or \
-            re.match(r'.*_L\d{2}(?P<lane>\d{1}).*', sample_basename)
-            #re.match(r'(?P<project>P\d{3})_(?P<sample>\w+)_.*_L(?P<lane>\d{3})', sample_basename)
-
-    if match:
-        #return match.group('project'), match.group('sample'), match.group('lane')
-        return int(match.group('lane'))
-    else:
-        error_msg = ('Error: filename didn\'t match conventions, '
-                     'couldn\'t find lane number for sample '
-                     '"{}"'.format(sample_basename))
-        LOG.error(error_msg)
-        raise ValueError(error_msg)
-
-
-@memoized
-def get_flowcell_id_from_dirtree(path):
-    """Given the path to a file, tries to work out the flowcell ID.
-
-    Project directory structure is generally either:
-        <run_id>/Sample_<project-sample-id>/
-         131018_D00118_0121_BC2NANACXX/Sample_NA10860_NR/
-        (Uppsala format)
-    or:
-        <project>/<project-sample-id>/<libprep>/<date>_<flowcell>/
-        J.Doe_14_03/P673_101/140220_AH8AMJADXX/
-        (NGI format)
-    :param str path: The path to the file
-    :returns: The flowcell ID
-    :rtype: str
-    :raises ValueError: If the flowcell ID cannot be determined
-    """
-    flowcell_pattern = re.compile(r'\d{4,6}_(?P<fcid>[A-Z0-9]{10})')
-    try:
-        # NGI format (4-dir)
-        path, dirname = os.path.split(path)
-        return flowcell_pattern.match(dirname).groups()[0]
-    except (IndexError, AttributeError):
-        try:
-            # SciLifeLab Uppsala tree format (2-dir)
-            _, dirname = os.path.split(path)
-            return flowcell_pattern.match(dirname).groups()[0]
-        except (IndexError, AttributeError):
-            raise ValueError("Could not determine flowcell ID from directory path.")
 
 
 class XmlToList(list):
@@ -302,13 +285,6 @@ class XmlToList(list):
                 self.append({k:v for k,v in element.items()})
 
 
-# Sometimes you don't want to deal with a goddamn object you just want your goddamn XML dict
-def xmltodict_file(config_file):
-    tree = ET.parse(config_file)
-    root = tree.getroot()
-    return XmlToDict(root)
-
-
 # Generic XML to dict parsing
 # See http://code.activestate.com/recipes/410469-xml-as-dictionary/
 class XmlToDict(dict):
@@ -327,8 +303,8 @@ class XmlToDict(dict):
     And then use xmldict for what it is... a dict.
     '''
     def __init__(self, parent_element):
-        if parent_element.items():
-            self.update(dict(parent_element.items()))
+        if list(parent_element.items()):
+            self.update(dict(list(parent_element.items())))
         for element in parent_element:
             if element:
                 # treat like dict - we assume that if the first two tags
@@ -343,16 +319,16 @@ class XmlToDict(dict):
                     # the value is the list itself
                     aDict = {element[0].tag: XmlToList(element)}
                 # if the tag has attributes, add those to the dict
-                if element.items():
-                    aDict.update(dict(element.items()))
+                if list(element.items()):
+                    aDict.update(dict(list(element.items())))
                 self.update({element.tag: aDict})
             # this assumes that if you've got an attribute in a tag,
             # you won't be having any text. This may or may not be a
             # good idea -- time will tell. It works for the way we are
             # currently doing XML configuration files...
             ## additional note from years later, nobody ever comes back to look at old code and examine assumptions
-            elif element.items():
-                self.update({element.tag: dict(element.items())})
+            elif list(element.items()):
+                self.update({element.tag: dict(list(element.items()))})
                 # add the following line
                 self[element.tag].update({"__Content__":element.text})
 
@@ -394,7 +370,7 @@ class RunMetricsParser(dict):
             return re.search(pattern, f) != None
         if not filter_fn:
             filter_fn = filter_function
-        return filter(filter_fn, self.files)
+        return list(filter(filter_fn, self.files))
 
     def parse_json_files(self, filter_fn=None):
         """Parse json files and return the corresponding dicts
@@ -425,7 +401,7 @@ class RunMetricsParser(dict):
         return dicts
 
 
-class RunInfoParser():
+class RunInfoParser(object):
     """RunInfo parser"""
     def __init__(self):
         self._data = {}
@@ -463,7 +439,7 @@ class RunInfoParser():
         p.ParseFile(fp)
 
 
-class RunParametersParser():
+class RunParametersParser(object):
     """runParameters.xml parser"""
     def __init__(self):
         self.data = {}

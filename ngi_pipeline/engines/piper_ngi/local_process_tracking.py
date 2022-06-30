@@ -231,7 +231,7 @@ def update_charon_with_local_jobs_status(quiet=False, config=None, config_file_p
                             remote_sample=charon_session.sample_get(projectid=project_id, sampleid=sample_id)
                             charon_status = remote_sample.get(sample_status_field)
                             if charon_status and not charon_status == set_status:
-                                LOG.warn('Tracking inconsistency for {}: Charon status '
+                                LOG.warning('Tracking inconsistency for {}: Charon status '
                                          'for field "{}" is "{}" but local process tracking '
                                          'database indicates it is running. Setting value '
                                          'in Charon to {}.'.format(label, sample_status_field,
@@ -340,7 +340,7 @@ def update_sample_duplication_and_coverage(project_id, sample_id, project_base_p
     except CharonError as e:
         error_text = ('Could not update project/sample "{}/{}" '
                     'in Charon with duplication rate : {}'
-                      'and coverage {}'.format("{}/{}".format(project_id, sampleid, dup_pc, cov)))
+                      'and coverage {}'.format(project_id, sample_id, dup_pc, cov))
         LOG.error(error_text)
         if not config.get('quiet'):
             mail_analysis(project_name=project_id, sample_name=sample_id,
@@ -366,7 +366,7 @@ def update_coverage_for_sample_seqruns(project_id, sample_id, piper_qc_dir,
     seqruns_by_libprep = get_finished_seqruns_for_sample(project_id, sample_id)
 
     charon_session = CharonSession()
-    for libprep_id, seqruns in seqruns_by_libprep.iteritems():
+    for libprep_id, seqruns in seqruns_by_libprep.items():
         for seqrun_id in seqruns:
             label = "{}/{}/{}/{}".format(project_id, sample_id, libprep_id, seqrun_id)
             genome_results_file_paths=glob.glob(os.path.join(piper_qc_dir, "{}.{}*.qc".format(sample_id, seqrun_id.split('_')[-1]),"genome_results.txt"))
@@ -424,7 +424,7 @@ def record_process_sample(project, sample, workflow_subtask, analysis_module_nam
                              'workflow "{}"'.format(slurm_job_id, project, sample, workflow_subtask))
                     break
                 except OperationalError as e:
-                    LOG.warn('Database locked ("{}"). Waiting...'.format(e))
+                    LOG.warning('Database locked ("{}"). Waiting...'.format(e))
                     time.sleep(15)
             else:
                 raise RuntimeError("Could not write to database after three attempts (locked?)")
@@ -440,7 +440,7 @@ def record_process_sample(project, sample, workflow_subtask, analysis_module_nam
             sample_status_field = "analysis_status"
             sample_status_value = "UNDER_ANALYSIS"
             sample_data_status_field = "status"
-            sample_data_status_value = "STALE"
+            sample_data_status_value = '' #in his way it will not be updated
             seqrun_status_field = "alignment_status"
             seqrun_status_value = "RUNNING"
             extra_args = {"mean_autosomal_coverage": 0}

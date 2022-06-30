@@ -4,8 +4,10 @@ import tempfile
 import os
 from ngi_pipeline.engines.piper_ngi.command_creation_config import build_piper_cl, build_setup_xml
 from ngi_pipeline.engines.piper_ngi.launchers import analyze
-from ngi_pipeline.conductor.classes import NGIProject
+from ngi_pipeline import conductor
+from ngi_pipeline.conductor.classes import NGIProject, NGIAnalysis
 from ngi_pipeline.utils.config import load_yaml_config, locate_ngi_config
+
 
 class TestCommandCreation(unittest.TestCase):
     @classmethod
@@ -91,15 +93,3 @@ class TestCommandCreation(unittest.TestCase):
         cl = build_piper_cl(**kwargs).split(" ")
         _validate_cl(cl)
         assert '--keep_pre_bqsr_bam' in cl
-
-        cl = build_piper_cl(generate_bqsr_bam=True, **kwargs).split(" ")
-        _validate_cl(cl)
-        assert '--keep_pre_bqsr_bam' not in cl
-
-
-    def test_analyze(self):
-        with mock.patch('ngi_pipeline.engines.piper_ngi.utils.CharonSession',
-                        spec=False,
-                        return_value=self.charon_mock) as dbmock:
-            analyze(self.project_obj, self.sample_obj)
-        return True

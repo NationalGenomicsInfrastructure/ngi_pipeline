@@ -10,98 +10,21 @@ import re
 import sys
 
 from ngi_pipeline.conductor.classes import NGIProject
-from ngi_pipeline.conductor.launchers import launch_analysis
 from ngi_pipeline.database.classes import CharonSession, CharonError
 from ngi_pipeline.database.communicate import get_project_id_from_name
-from ngi_pipeline.database.filesystem import create_charon_entries_from_project
 from ngi_pipeline.log.loggers import minimal_logger
 from ngi_pipeline.utils.classes import with_ngi_config
 from ngi_pipeline.utils.communication import mail_analysis
-from ngi_pipeline.utils.filesystem import do_rsync, do_symlink, \
-                                          locate_flowcell, safe_makedir
+from ngi_pipeline.utils.filesystem import do_symlink, locate_flowcell, safe_makedir
 from ngi_pipeline.utils.parsers import determine_library_prep_from_fcid, \
-                                       determine_library_prep_from_samplesheet, \
-                                       parse_lane_from_filename
+                                       get_sample_numbers_from_samplesheet
+from six.moves import filter
 
 LOG = minimal_logger(__name__)
 
 UPPSALA_PROJECT_RE = re.compile(r'(\w{2}-\d{4}|\w{2}\d{2,3})')
 STHLM_PROJECT_RE = re.compile(r'[A-z]+[_.][A-z0-9]+_\d{2}_\d{2}')
 STHLM_X_PROJECT_RE = re.compile(r'[A-z]+_[A-z0-9]+_\d{2}_\d{2}')
-
-
-## TODO we should just remove this function
-def process_demultiplexed_flowcell(demux_fcid_dir_path, restrict_to_projects=None,
-                                   restrict_to_samples=None, restart_failed_jobs=False,
-                                   restart_finished_jobs=False, restart_running_jobs=False,
-                                   keep_existing_data=False, no_qc=False, quiet=False,
-                                   manual=False, config=None, config_file_path=None, generate_bqsr_bam=False):
-    """Call process_demultiplexed_flowcells, restricting to a single flowcell.
-    Essentially a restrictive wrapper.
-
-    :param str demux_fcid_dirs: The CASAVA-produced demux directory/directories.
-    :param list restrict_to_projects: A list of projects; analysis will be
-                                      restricted to these. Optional.
-    :param list restrict_to_samples: A list of samples; analysis will be
-                                     restricted to these. Optional.
-    :param bool restart_failed_jobs: Restart jobs marked as "FAILED" in Charon.
-    :param bool restart_finished_jobs: Restart jobs marked as "DONE" in Charon.
-    :param bool restart_running_jobs: Restart jobs marked as running in Charon
-    :param bool keep_existing_data: Keep existing analysis data when launching new jobs
-    :param str config_file_path: The path to the NGI configuration file; optional.
-    """
-    if type(demux_fcid_dir_path) is not str:
-        error_message = ("The path to a single demultiplexed flowcell should be "
-                         "passed to this function as a string.")
-        raise ValueError(error_message)
-    process_demultiplexed_flowcells([demux_fcid_dir_path], restrict_to_projects,
-                                    restrict_to_samples, restart_failed_jobs,
-                                    restart_finished_jobs, restart_running_jobs,
-                                    keep_existing_data=keep_existing_data,
-                                    no_qc=no_qc, config_file_path=config_file_path,
-                                    quiet=quiet, manual=manual, generate_bqsr_bam=generate_bqsr_bam)
-
-
-@with_ngi_config
-def process_demultiplexed_flowcells(demux_fcid_dirs, restrict_to_projects=None,
-                                    restrict_to_samples=None, restart_failed_jobs=False,
-                                    restart_finished_jobs=False, restart_running_jobs=False,
-                                    fallback_libprep=None, keep_existing_data=False, no_qc=False,
-                                    quiet=False, manual=False, config=None, config_file_path=None,
-                                    generate_bqsr_bam=False):
-    """Sort demultiplexed Illumina flowcells into projects and launch their analysis.
-
-    :param list demux_fcid_dirs: The CASAVA-produced demux directory/directories.
-    :param list restrict_to_projects: A list of projects; analysis will be
-                                      restricted to these. Optional.
-    :param list restrict_to_samples: A list of samples; analysis will be
-                                     restricted to these. Optional.
-    :param bool restart_failed_jobs: Restart jobs marked as "FAILED" in Charon.
-    :param bool restart_finished_jobs: Restart jobs marked as "DONE" in Charon.
-    :param bool restart_running_jobs: Restart jobs marked as running in Charon
-    :param str fallback_libprep: If libprep cannot be determined, use this value if supplied (default None)
-    :param bool keep_existing_data: Keep existing analysis data when launching new jobs
-    :param bool quiet: Don't send notification emails; added to config
-    :param bool manual: This is being run from a user script; added to config
-    :param dict config: The parsed NGI configuration file; optional.
-    :param str config_file_path: The path to the NGI configuration file; optional.
-    """
-    if not restrict_to_projects: restrict_to_projects = []
-    if not restrict_to_samples: restrict_to_samples = []
-    projects_to_analyze = organize_projects_from_flowcell(demux_fcid_dirs=demux_fcid_dirs,
-                                                          restrict_to_projects=restrict_to_projects,
-                                                          restrict_to_samples=restrict_to_samples,
-                                                          fallback_libprep=fallback_libprep,
-                                                          quiet=quiet, config=config)
-    for project in projects_to_analyze:
-        if UPPSALA_PROJECT_RE.match(project.project_id):
-            LOG.info('Creating Charon records for Uppsala project "{}" if they '
-                     'are missing'.format(project))
-            create_charon_entries_from_project(project, sequencing_facility="NGI-U")
-    launch_analysis(projects_to_analyze, restart_failed_jobs, restart_finished_jobs,
-                    restart_running_jobs, keep_existing_data=keep_existing_data,
-                    no_qc=no_qc, config=config, generate_bqsr_bam=generate_bqsr_bam)
-
 
 @with_ngi_config
 def organize_projects_from_flowcell(demux_fcid_dirs, restrict_to_projects=None,
@@ -164,8 +87,49 @@ def organize_projects_from_flowcell(demux_fcid_dirs, restrict_to_projects=None,
                              "information.".format(",".join(demux_fcid_dirs_set)))
         raise RuntimeError(error_message)
     else:
-        projects_to_analyze = projects_to_analyze.values()
+        projects_to_analyze = list(projects_to_analyze.values())
     return projects_to_analyze
+
+
+def match_fastq_sample_number_to_samplesheet(fastq_file, samplesheet_sample_numbers, project_id=None):
+    """
+    Given the sample numbers deduced from the samplesheet and a fastq file name, will return the corresponsing
+    samplesheet entry, taking sample name, lane number and sample number into account. If project_id is specified,
+    this will also be taken into account.
+
+    :param fastq_file: fastq file name
+    :param samplesheet_sample_numbers: list of samplesheet entries with deduced sample numbers
+    :param project_id: project id. If not specified, this field will not be compared
+    :return: the samplesheet entry corresponding to the fastq file as a list, following the format returned by
+    ngi_pipeline.utils.parsers.get_sample_numbers_from_samplesheet
+    """
+    def _is_a_match(ss_sample, prjid, sname, lnum, snum):
+        return all([
+            ss_sample[0] == snum,
+            ss_sample[5] == int(lnum),
+            ss_sample[2] == sname,
+            (prjid is None or ss_sample[1] == prjid)])
+
+    try:
+        samnple_name, sample_num, lane_num = re.match(
+            r'([\w-]+)_(S\d+)_L(\d{3})_\w+',
+            os.path.basename(fastq_file)).groups()
+        return next(filter(
+            lambda s: _is_a_match(s, project_id, samnple_name, lane_num, sample_num),
+            samplesheet_sample_numbers))
+    except AttributeError:
+        # the sample and lane numbers could not be identified in fastq file name
+        pass
+    except StopIteration:
+        # the sample number and lane number could not be matched to any samplesheet_sample_number
+        pass
+    except IndexError:
+        # the sample number and lane number could not be matched to any samplesheet_sample_number
+        pass
+    except TypeError:
+        # the list of samplesheet entries was None
+        pass
+    return None
 
 
 @with_ngi_config
@@ -224,17 +188,23 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
         return []
     fc_full_id = fc_dir_structure['fc_full_id']
     if not fc_dir_structure.get('projects'):
-        LOG.warn("No projects found in specified flowcell directory \"{}\"".format(fc_dir))
+        LOG.warning("No projects found in specified flowcell directory \"{}\"".format(fc_dir))
+
     # Iterate over the projects in the flowcell directory
     for project in fc_dir_structure.get('projects', []):
         project_name = project['project_name']
         project_original_name = project['project_original_name']
         samplesheet_path = fc_dir_structure.get("samplesheet_path")
+
+        # parse the samplesheet and get the expected sample numbers assigned by bcl2fastq
+        samplesheet_sample_numbers = get_sample_numbers_from_samplesheet(
+            samplesheet_path) if samplesheet_path else None
+
         try:
             # Maps e.g. "Y.Mom_14_01" to "P123"
             project_id = get_project_id_from_name(project_name)
         except (CharonError, RuntimeError, ValueError) as e:
-            LOG.warn('Could not retrieve project id from Charon (record missing?). '
+            LOG.warning('Could not retrieve project id from Charon (record missing?). '
                      'Using project name ("{}") as project id '
                      '(error: {})'.format(project_name, e))
             project_id = project_name
@@ -282,23 +252,22 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
             sample_obj = project_obj.add_sample(name=sample_name, dirname=sample_name)
             # Get the Library Prep ID for each file
             pattern = re.compile(".*\.(fastq|fq)(\.gz|\.gzip|\.bz2)?$")
-            fastq_files = filter(pattern.match, sample.get('files', []))
+            fastq_files = list(filter(pattern.match, sample.get('files', [])))
             # For each fastq file, create the libprep and seqrun objects
             # and add the fastq file to the seqprep object
             # Note again that these objects only get created if they don't yet exist;
             # if they do exist, the existing object is returned
             for fq_file in fastq_files:
-                # Try to parse from SampleSheet
-                try:
-                    if not samplesheet_path: raise ValueError()
-                    lane_num = re.match(r'[\w-]+_L\d{2}(\d)_\w+', fq_file).groups()[0]
-                    libprep_name = determine_library_prep_from_samplesheet(samplesheet_path,
-                                                                           project_original_name,
-                                                                           sample_name,
-                                                                           lane_num)
-                except (IndexError, ValueError) as e:
-                    LOG.debug('Unable to determine library prep from sample sheet file '
-                              '("{}"); try to determine from Charon'.format(e))
+                # Try to use assignment from SampleSheet
+                samplesheet_sample = match_fastq_sample_number_to_samplesheet(
+                    fq_file,
+                    samplesheet_sample_numbers,
+                    project_id)
+                if samplesheet_sample is not None and \
+                        samplesheet_sample[6] is not None:
+                    libprep_name = samplesheet_sample[6]
+                else:
+                    LOG.debug('Unable to determine library prep from sample sheet file; try to determine from Charon')
                     try:
                         # Requires Charon access
                         libprep_name = determine_library_prep_from_fcid(project_id, sample_name, fc_full_id)
@@ -308,7 +277,7 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
                         libpreps = charon_session.sample_get_libpreps(project_id, sample_name).get('libpreps')
                         if len(libpreps) == 1:
                             libprep_name = libpreps[0].get('libprepid')
-                            LOG.warn('Project "{}" / sample "{}" / seqrun "{}" / fastq "{}" '
+                            LOG.warning('Project "{}" / sample "{}" / seqrun "{}" / fastq "{}" '
                                      'has no libprep information in Charon, but only one '
                                      'library prep is present in Charon ("{}"). Using '
                                      'this as the library prep.'.format(project_name,
@@ -318,15 +287,14 @@ def setup_analysis_directory_structure(fc_dir, projects_to_analyze,
                                                                         libprep_name))
                         elif fallback_libprep:
                             libprep_name = fallback_libprep
-                            LOG.warn('Project "{}" / sample "{}" / seqrun "{}" / fastq "{}" '
+                            LOG.warning('Project "{}" / sample "{}" / seqrun "{}" / fastq "{}" '
                                      'has no libprep information in Charon, but a fallback '
                                      'libprep value of "{}" was supplied -- using this '
                                      'value.'.format(project_name,
                                                      sample_name,
                                                      fc_full_id,
                                                      fq_file,
-                                                     libprep_name,
-                                                     fallback_libprep))
+                                                     libprep_name))
                         else:
                             error_text = ('Project "{}" / sample "{}" / seqrun "{}" / fastq "{}" '
                                           'has no libprep information in Charon. Skipping '
@@ -397,9 +365,12 @@ def parse_flowcell(fc_dir):
     if not os.access(fc_dir, os.R_OK): os_msg = "could not be read (permission denied)"
     if locals().get('os_msg'): raise OSError("Error with flowcell dir {}: directory {}".format(fc_dir, os_msg))
     LOG.info('Parsing flowcell directory "{}"...'.format(fc_dir))
-    samplesheet_path = os.path.join(fc_dir, "SampleSheet.csv")
+    if os.path.exists(os.path.join(fc_dir, "SampleSheet_copy.csv")):
+        samplesheet_path = os.path.join(fc_dir, "SampleSheet_copy.csv")
+    else:
+        samplesheet_path = os.path.join(fc_dir, "SampleSheet.csv")
     if not os.path.exists(samplesheet_path):
-        LOG.warn("Could not find samplesheet in directory {}".format(fc_dir))
+        LOG.warning("Could not find samplesheet in directory {}".format(fc_dir))
         samplesheet_path = None
     else:
         LOG.debug("SampleSheet.csv found at {}".format(samplesheet_path))
@@ -428,14 +399,19 @@ def parse_flowcell(fc_dir):
         for sample_dir in glob.glob(sample_dir_pattern):
             LOG.info('Parsing samples directory "{}"...'.format(sample_dir.split(
                                                 os.path.split(fc_dir)[0] + "/")[1]))
-            sample_name = os.path.basename(sample_dir).replace('Sample_', '')
+            sample_id = os.path.basename(sample_dir).replace('Sample_', '')
             fastq_file_pattern = os.path.join(sample_dir, "*.fastq.gz")
             fastq_files = [os.path.basename(fq) for fq in glob.glob(fastq_file_pattern)]
+            sample_name = set(
+                map(
+                    lambda f: re.match(r'([\w-]+)_S\d+_L\d{3}_[RI]\d+_', f).group(1),
+                    fastq_files)).pop()
             project_samples.append({'sample_dir': os.path.basename(sample_dir),
+                                    'sample_id': sample_id,
                                     'sample_name': sample_name,
                                     'files': fastq_files})
         if not project_samples:
-            LOG.warn('No samples found for project "{}" in fc "{}"'.format(project_name, fc_dir))
+            LOG.warning('No samples found for project "{}" in fc "{}"'.format(project_name, fc_dir))
         else:
             projects.append({'data_dir': os.path.relpath(os.path.dirname(project_dir), fc_dir),
                              'project_dir': os.path.basename(project_dir),
