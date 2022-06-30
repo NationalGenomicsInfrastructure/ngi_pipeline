@@ -1,0 +1,21 @@
+language: python
+
+python:
+    - "2.7"
+    - "3.8"
+
+install:
+    - pip install -e . -r ./requirements-dev.txt
+    - pip install --upgrade codecov
+
+before_script:
+    - mkdir ~/.ngipipeline && cp test_ngi_config.yaml ~/.ngipipeline/ngi_config.yaml
+
+script:
+    - cd ngi_pipeline/tests && nosetests --with-coverage -v -s conductor/ engines/piper_ngi/ engines/sarek engines/qc_ngi  utils/ database/test_communicate.py database/test_filesystem.py database/test_utils.py
+
+after_success:
+    - codecov
+
+notifications:
+    email: false
