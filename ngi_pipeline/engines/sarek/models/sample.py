@@ -38,6 +38,12 @@ class SarekAnalysisSample(object):
         """
         return self.analysis_object.sample_data_path(self.project_base_path, self.projectid, self.sampleid)
 
+    def project_analysis_path(self):
+        """
+        :return: the path to the analysis output for the project
+        """
+        return self.analysis_object.project_analysis_path(self.project_base_path, self.projectid)
+
     def sample_analysis_path(self):
         """
         :return: the path to the analysis output for the sample
@@ -52,6 +58,13 @@ class SarekAnalysisSample(object):
         """
         return os.path.join(self.sample_data_path(), libprepid, seqrunid)
 
+    def project_analysis_exit_code_path(self):
+        """
+        :return: the path to the exit code file for this project and analysis
+        """
+        return self.analysis_object.project_analysis_exit_code_path(
+            self.project_base_path, self.projectid)
+
     def sample_analysis_exit_code_path(self):
         """
         :return: the path to the exit code file for this sample and analysis
@@ -59,14 +72,26 @@ class SarekAnalysisSample(object):
         return self.analysis_object.sample_analysis_exit_code_path(
             self.project_base_path, self.projectid, self.sampleid)
 
+    def project_analysis_tsv_file(self):
+        """
+        :return: the path to a tsv file specifying details of analysis including this sample
+        """
+        return self.analysis_object.project_analysis_tsv_file(self.project_base_path, self.projectid)
+
     def sample_analysis_tsv_file(self):
         """
         :return: the path to the tsv file specifying the details of the analysis
         """
         return self.analysis_object.sample_analysis_tsv_file(self.project_base_path, self.projectid, self.sampleid)
 
+    def project_analysis_work_dir(self):
+        return self.analysis_object.project_analysis_work_dir(self.project_base_path, self.projectid)
+
     def sample_analysis_work_dir(self):
         return self.analysis_object.sample_analysis_work_dir(self.project_base_path, self.projectid, self.sampleid)
+
+    def project_analysis_results_dir(self):
+        return self.analysis_object.project_analysis_results_dir(self.project_base_path, self.projectid)
 
     def sample_analysis_results_dir(self):
         return self.analysis_object.sample_analysis_results_dir(self.project_base_path, self.projectid, self.sampleid)

@@ -37,7 +37,7 @@ class TestCharonFunctions(unittest.TestCase):
     @mock.patch('ngi_pipeline.database.filesystem.CharonSession.seqrun_create')
     def test_create_charon_entries_from_project(self, mock_seqrun, mock_libprep, mock_sample, mock_proj):
         create_charon_entries_from_project(self.project_obj)
-        mock_proj.assert_called_once_with(best_practice_analysis='whole_genome_reseq', 
+        mock_proj.assert_called_once_with(best_practice_analysis='wgs_germline',
                                             name='S.One_20_02', 
                                             projectid='P100001', 
                                             sequencing_facility='NGI-S', 
@@ -78,7 +78,7 @@ class TestCharonFunctions(unittest.TestCase):
 
         create_charon_entries_from_project(self.project_obj, force_overwrite=True)
 
-        mock_project_ud.assert_called_once_with(best_practice_analysis='whole_genome_reseq', 
+        mock_project_ud.assert_called_once_with(best_practice_analysis='wgs_germline',
                                                 name='S.One_20_02', 
                                                 projectid='P100001', 
                                                 sequencing_facility='NGI-S', 

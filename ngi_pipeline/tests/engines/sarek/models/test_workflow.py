@@ -72,8 +72,11 @@ class TestSarekMainStep(unittest.TestCase):
 
     def test_report_files(self):
         analysis_sample = mock.Mock(spec=SarekAnalysisSample)
+        analysis_sample.projectid = "this-is-a-project-id"
         analysis_sample.sampleid = "this-is-a-sample-id"
+        analysis_sample.project_analysis_path.return_value = "this-is-a-path"
         analysis_sample.sample_analysis_path.return_value = "this-is-a-path"
+        analysis_sample.project_analysis_results_dir.return_value = "this-is-the-results-path"
         analysis_sample.sample_analysis_results_dir.return_value = "this-is-the-results-path"
         with mock.patch("os.listdir") as list_mock:
             file_list = ["file1", "file2.extension", "file3.metrics", "file4.metrics"]

@@ -8,8 +8,10 @@ from ngi_pipeline.log.loggers import minimal_logger
 LOG = minimal_logger(__name__)
 
 
-def create_charon_entries_from_project(project, best_practice_analysis="whole_genome_reseq",
+def create_charon_entries_from_project(project, best_practice_analysis="wgs_germline",
                                        sequencing_facility="NGI-S",
+                                       pipeline="sarek",
+                                       reference="GRCh38",
                                        force_overwrite=False,
                                        retry_on_fail=True):
     """Given a project object, creates the relevant entries in Charon.
@@ -17,8 +19,10 @@ def create_charon_entries_from_project(project, best_practice_analysis="whole_ge
     it became a part of the pipeline. Use at your own risk! Ha ha.
 
     :param NGIProject project: The NGIProject object
-    :param str best_practice_analysis: The workflow to assign for this project (default "variant_calling")
+    :param str best_practice_analysis: The workflow to assign for this project (default "wgs_germline")
     :param str sequencing_facility: The facility that did the sequencing
+    :param str pipeline: The pipeline to execute for this project (default "sarek")
+    :param str reference: The reference genome to use for this project (default "GRCh38")
     :param bool force_overwrite: If this is set to true, overwrite existing entries in Charon (default false)
     """
     charon_session = CharonSession()
@@ -33,7 +37,9 @@ def create_charon_entries_from_project(project, best_practice_analysis="whole_ge
                                       name=project.name,
                                       status=status,
                                       best_practice_analysis=best_practice_analysis,
-                                      sequencing_facility=sequencing_facility)
+                                      sequencing_facility=sequencing_facility,
+                                      pipeline=pipeline,
+                                      reference=reference)
         LOG.info('Project "{}" created in Charon.'.format(project))
     except CharonError as e:
         if e.status_code == 400:
@@ -43,7 +49,9 @@ def create_charon_entries_from_project(project, best_practice_analysis="whole_ge
                                               name=project.name,
                                               status=status,
                                               best_practice_analysis=best_practice_analysis,
-                                              sequencing_facility=sequencing_facility)
+                                              sequencing_facility=sequencing_facility,
+                                              pipeline=pipeline,
+                                              reference=reference)
                 LOG.info('Project "{}" updated in Charon.'.format(project))
             else:
                 LOG.info('Project "{}" already exists; moving to samples...'.format(project))
@@ -149,11 +157,11 @@ def create_charon_entries_from_project(project, best_practice_analysis="whole_ge
                         LOG.error(e)
                         continue
 
-    if update_failed :
+    if update_failed:
         if retry_on_fail:
-            create_charon_entries_from_project(project, best_practice_analysis=best_practice_analysis,
-                                       sequencing_facility=sequencing_facility,
-                                       force_overwrite=force_overwrite,
-                                       retry_on_fail=False)
+            create_charon_entries_from_project(
+                project, best_practice_analysis=best_practice_analysis,
+                sequencing_facility=sequencing_facility, force_overwrite=force_overwrite,
+                retry_on_fail=False)
         else:
             raise CharonError("A network error blocks Charon updating.")

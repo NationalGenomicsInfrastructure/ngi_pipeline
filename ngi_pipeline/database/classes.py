@@ -49,11 +49,12 @@ class CharonSession(six.with_metaclass(Singleton, requests.Session)):
                     headers=self._api_token_dict, timeout=10))
 
         self._project_params = ('projectid', 'name', 'status', 'best_practice_analysis',
-                                'sequencing_facility', 'delivery_status', 'delivery_token', 'delivery_projects')
-        self._project_reset_params = tuple(set(self._project_params) - \
+                                'sequencing_facility', 'delivery_status', 'delivery_token',
+                                'delivery_projects', 'pipeline', 'reference')
+        self._project_reset_params = tuple(set(self._project_params) -
                                            set(['projectid', 'name',
                                                 'best_practice_analysis',
-                                                'sequencing_facility']))
+                                                'sequencing_facility', 'pipeline', 'reference']))
         self._sample_params = ('sampleid', 'status', 'analysis_status', 'qc_status',
                                'genotype_status', 'genotype_concordance',
                                'total_autosomal_coverage', 'total_sequenced_reads',
@@ -80,8 +81,8 @@ class CharonSession(six.with_metaclass(Singleton, requests.Session)):
         self._base_url = charon_url
 
     # Project
-    def project_create(self, projectid, name=None, status=None,
-                       best_practice_analysis=None, sequencing_facility=None):
+    def project_create(self, projectid, name=None, status=None, best_practice_analysis=None,
+                       sequencing_facility=None, pipeline=None, reference=None):
         l_dict = locals()
         data = { k: l_dict.get(k) for k in self._project_params }
         return self.post(self.construct_charon_url('project'),
@@ -95,7 +96,9 @@ class CharonSession(six.with_metaclass(Singleton, requests.Session)):
         return self.get(self.construct_charon_url('samples', projectid)).json()
 
     def project_update(self, projectid, name=None, status=None, best_practice_analysis=None,
-                       sequencing_facility=None, delivery_status=None, delivery_token=None, delivery_projects=None):
+                       sequencing_facility=None,
+                       delivery_status=None, delivery_token=None, delivery_projects=None,
+                       pipeline=None, reference=None):
         l_dict = locals()
         data = { k: l_dict.get(k) for k in self._project_params if l_dict.get(k)}
         return self.put(self.construct_charon_url('project', projectid),
