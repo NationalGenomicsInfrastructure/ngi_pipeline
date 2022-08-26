@@ -110,7 +110,7 @@ class TestCommon(unittest.TestCase):
             '2,Sample_CEP-NA11992-PCR-free,CEP-NA11992-PCR-free,,,,ATGTCA,YM01,LIBRARY_NAME:CEP_Pool9'.split(','),
             '3,Sample_CEP-NA10860-PCR-free,CEP-NA10860-PCR-free,,,,AGTTCC,YM01,LIBRARY_NAME:CEP_Pool8'.split(','),
             '4,Sample_CEP-NA10860-PCR-free,CEP-NA10860-PCR-free,,,,GGTTCC,YM01,LIBRARY_NAME:CEP_Pool1'.split(','),
-            '4,Sample_CEP-NA10860-PCR-free-2,CEP-NA10860-PCR-free,,,,GGTTCC,YM01,LIBRARY_NAME:CEP_Pool11'.split(',')
+            '4,Sample_CEP-NA10860-PCR-free,CEP-NA10860-PCR-free,,,,GGTTCC,YM01,LIBRARY_NAME:CEP_Pool11'.split(',')
         ]
         samplesheet_rows = [dict(list(zip(samplesheet_header, sample))) for sample in samplesheet_samples]
         for row in samplesheet_rows[0:-1]:
@@ -119,7 +119,7 @@ class TestCommon(unittest.TestCase):
         with mock.patch('ngi_pipeline.utils.parsers.parse_samplesheet') as samplesheet_mock:
             samplesheet_mock.return_value = samplesheet_rows
             observed_sample_numbers = parsers.get_sample_numbers_from_samplesheet('samplesheet_path')
-            self.assertListEqual(['S1', 'S2', 'S1', 'S1', 'S3'], [osn[0] for osn in observed_sample_numbers])
+            self.assertListEqual(['S1', 'S2', 'S1', 'S1', 'S1'], [osn[0] for osn in observed_sample_numbers])
 
     def test_parse_samplesheet(self):
         parsed_samplesheet = parsers.parse_samplesheet(self.ss_v25)        
