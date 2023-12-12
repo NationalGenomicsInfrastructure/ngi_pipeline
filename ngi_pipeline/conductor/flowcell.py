@@ -22,7 +22,7 @@ from six.moves import filter
 
 LOG = minimal_logger(__name__)
 
-UPPSALA_PROJECT_RE = re.compile(r'(\w{2}-\d{4}|\w{2}\d{2,3})')
+UPPSALA_PROJECT_RE = re.compile(r'(\w{2}-\d{4}|\w{2}-?\d{2,3})')
 STHLM_PROJECT_RE = re.compile(r'[A-z]+[_.][A-z0-9]+_\d{2}_\d{2}')
 STHLM_X_PROJECT_RE = re.compile(r'[A-z]+_[A-z0-9]+_\d{2}_\d{2}')
 
