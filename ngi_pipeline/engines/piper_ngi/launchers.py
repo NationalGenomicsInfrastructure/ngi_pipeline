@@ -1,7 +1,6 @@
 """The Piper automated launcher script."""
 from __future__ import print_function
 
-import collections
 import glob
 import os
 import re

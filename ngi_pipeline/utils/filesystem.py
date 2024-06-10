@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import collections
 import contextlib
 import datetime
 import fnmatch
