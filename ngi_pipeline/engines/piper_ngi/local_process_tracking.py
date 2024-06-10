@@ -1,4 +1,3 @@
-import collections
 import glob
 import inspect
 import os

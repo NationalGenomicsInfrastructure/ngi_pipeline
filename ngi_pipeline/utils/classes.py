@@ -41,7 +41,7 @@ class memoized(object):
         self.cached = {}
         functools.update_wrapper(self, func)
     def __call__(self, *args):
-        if not isinstance(args, collections.Hashable):
+        if not isinstance(args, collections.abc.Hashable):
             return self.func(*args)
         if args in self.cached:
             return self.cached[args]
