@@ -240,7 +240,7 @@ class TestSarekAnalysis(unittest.TestCase):
                 sarek_analysis.create_tsv_file(analysis_sample)
             tsv_mock.return_value = [["this", "is"], ["some", "content"]]
             tempdir = tempfile.mkdtemp(prefix="test_create_tsv_file_")
-            tsv_path_mock.return_value = os.path.join(tempdir, "tsv_parent_folder", "tsv_file.tsv")
+            tsv_path_mock.return_value = os.path.join(tempdir, "tsv_parent_folder", "tsv_file.csv")
             sarek_analysis.create_tsv_file(analysis_sample)
             self.assertTrue(os.path.exists(tsv_path_mock.return_value))
             shutil.rmtree(tempdir)
