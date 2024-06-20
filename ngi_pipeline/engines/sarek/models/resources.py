@@ -140,9 +140,9 @@ class ReferenceGenome(object):
 
 class GRCh37(ReferenceGenome):
     """Class representing the GRCh37 reference genome"""
-    NAME = "GRCh37"
+    NAME = "GATK.GRCh37"
 
 
 class GRCh38(ReferenceGenome):
     """Class representing the GRCh38 reference genome"""
-    NAME = "GRCh38"
+    NAME = "GATK.GRCh38"
