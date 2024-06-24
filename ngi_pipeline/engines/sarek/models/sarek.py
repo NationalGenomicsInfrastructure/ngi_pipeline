@@ -27,7 +27,7 @@ class SarekAnalysis(object):
             "subcommand": "run"},
         "sarek": {
             "command": os.path.join(
-                "/lupus",
+                "/vulpes",
                 "ngi",
                 "production",
                 "latest",
@@ -433,7 +433,7 @@ class SarekAnalysis(object):
         tsv_file = analysis_sample.sample_analysis_tsv_file()
         safe_makedir(os.path.dirname(tsv_file))
         with open(tsv_file, "w") as fh:
-            writer = csv.writer(fh, dialect=csv.excel_tab)
+            writer = csv.writer(fh, dialect=csv.excel_tab, delimiter=',')
             writer.writerows(rows)
         return tsv_file
 
@@ -468,7 +468,7 @@ class SarekAnalysis(object):
 
     @classmethod
     def sample_analysis_tsv_file(cls, *args):
-        return cls._sample_analysis_file(*args, extension="tsv")
+        return cls._sample_analysis_file(*args, extension="csv")
 
     @classmethod
     def sample_analysis_work_dir(cls, *args):
@@ -529,9 +529,10 @@ class SarekGermlineAnalysis(SarekAnalysis):
         """
         rows = []
         patientid = analysis_sample.sampleid
-        gender = "ZZ"
+        gender = "NA"
         status = 0
         sampleid = patientid
+        rows.append(['patient','sex','status','sample','lane','fastq_1','fastq_2'])
         for sample_fastq in analysis_sample.runid_and_fastq_files_for_sample():
             rows.append([patientid, gender, status, sampleid] + sample_fastq)
         return rows
