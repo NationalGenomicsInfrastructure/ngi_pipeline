@@ -2,6 +2,7 @@ import os
 
 from ngi_pipeline.utils.classes import with_ngi_config
 
+
 @with_ngi_config
 def load_charon_variables(config=None, config_file_path=None):
     """Attempts to locate Charon-specific variables CHARON_API_TOKEN
@@ -14,10 +15,11 @@ def load_charon_variables(config=None, config_file_path=None):
     :rtype: dict
     """
     vars_dict = {}
-    var_names = ('charon_api_token', 'charon_base_url')
+    var_names = ("charon_api_token", "charon_base_url")
     for var_name in var_names:
-        var_value = config.get("charon", {}).get(var_name) or \
-                               os.environ.get(var_name.upper())
+        var_value = config.get("charon", {}).get(var_name) or os.environ.get(
+            var_name.upper()
+        )
         if var_value:
             vars_dict[var_name] = var_value
     return vars_dict

@@ -71,8 +71,11 @@ class ProcessStatus(object):
         :param exit_code_path: path to the file where the exit code of the process is expected to be stored
         :return: the type of a subclass of ProcessStatus which represents the status of the process
         """
-        return ProcessRunning if cls.is_process_running(processid) else \
-            ProcessExitStatus.get_type_from_exit_code_path(exit_code_path)
+        return (
+            ProcessRunning
+            if cls.is_process_running(processid)
+            else ProcessExitStatus.get_type_from_exit_code_path(exit_code_path)
+        )
 
     @staticmethod
     def is_process_running(processid):
@@ -89,6 +92,7 @@ class ProcessRunning(ProcessStatus):
     """
     Class representing a process that is running
     """
+
     pass
 
 
@@ -96,6 +100,7 @@ class ProcessStopped(ProcessStatus):
     """
     Class representing a process that has stopped
     """
+
     pass
 
 
@@ -103,6 +108,7 @@ class JobStatus(ProcessStatus):
     """
     Class representing slurm jobs
     """
+
     @staticmethod
     def is_process_running(jobid):
         return SlurmConnector.get_slurm_job_status(jobid) == ProcessRunning
@@ -154,6 +160,7 @@ class ProcessExitStatusSuccessful(ProcessExitStatus):
     """
     Class representing a successful exit status
     """
+
     pass
 
 
@@ -161,6 +168,7 @@ class ProcessExitStatusFailed(ProcessExitStatus):
     """
     Class representing a failed exit status
     """
+
     pass
 
 
@@ -168,6 +176,7 @@ class ProcessExitStatusUnknown(ProcessExitStatus):
     """
     Class representing an unknown exit status
     """
+
     pass
 
 
@@ -198,7 +207,7 @@ class SlurmConnector(ProcessConnector):
         "slurm_nodes": 1,
         "slurm_cores": 8,
         "slurm_job_time": "72:00:00",
-        "slurm_mail_events": "NONE"
+        "slurm_mail_events": "NONE",
     }
 
     def __init__(self, slurm_project, slurm_mail_user, cwd=None, **slurm_args):
@@ -219,11 +228,8 @@ class SlurmConnector(ProcessConnector):
         self.slurm_parameters.update(slurm_args)
 
     def _slurm_script_from_command_line(
-            self,
-            command_line,
-            working_dir,
-            exit_code_path,
-            job_name):
+        self, command_line, working_dir, exit_code_path, job_name
+    ):
         """
         Create a SLURM script ready for submission based on the supplied command line and the parameters in this
         SlurmConnector instance.
@@ -243,7 +249,9 @@ class SlurmConnector(ProcessConnector):
         slurm_script_dir = os.path.join(working_dir, "sbatch")
         safe_makedir(slurm_script_dir)
         slurm_script = os.path.join(
-            slurm_script_dir, "{}.{}.sbatch".format(job_name, datetime.datetime.now().strftime("%s")))
+            slurm_script_dir,
+            "{}.{}.sbatch".format(job_name, datetime.datetime.now().strftime("%s")),
+        )
         slurm_stdout = "{}.out".format(slurm_script)
         slurm_stderr = "{}.err".format(slurm_script)
 
@@ -253,19 +261,25 @@ class SlurmConnector(ProcessConnector):
                     slurm_job_name=job_name,
                     slurm_stdout=slurm_stdout,
                     slurm_stderr=slurm_stderr,
-                    slurm_working_directory=self.slurm_parameters.get("slurm_working_directory", working_dir),
-                    **self.slurm_parameters))
+                    slurm_working_directory=self.slurm_parameters.get(
+                        "slurm_working_directory", working_dir
+                    ),
+                    **self.slurm_parameters,
+                )
+            )
             # append any extra SLURM arguments passed
             for slurm_extra_arg in self.slurm_parameters.get("slurm_extra_args", []):
                 fh.write("#SBATCH {}\n".format(slurm_extra_arg))
 
-            fh.write("\necho \"\" > \"{}\"\n".format(exit_code_path))
+            fh.write('\necho "" > "{}"\n'.format(exit_code_path))
             fh.write("{}\n".format(command_line))
-            fh.write("echo \"$?\" > \"{}\"\n".format(exit_code_path))
+            fh.write('echo "$?" > "{}"\n'.format(exit_code_path))
 
         return slurm_script
 
-    def execute_process(self, command_line, working_dir=None, exit_code_path=None, job_name=None):
+    def execute_process(
+        self, command_line, working_dir=None, exit_code_path=None, job_name=None
+    ):
         """
         Wrap the supplied command line in a SLURM script and submit it to the job queue.
 
@@ -285,25 +299,29 @@ class SlurmConnector(ProcessConnector):
         safe_makedir(working_dir)
         with chdir(working_dir):
             slurm_script = self._slurm_script_from_command_line(
-                command_line,
-                working_dir,
-                exit_code_path,
-                job_name)
+                command_line, working_dir, exit_code_path, job_name
+            )
             # submit the sbatch file
             sbatch_command_line = "sbatch {}".format(slurm_script)
             proc = execute_command_line(
                 sbatch_command_line,
                 shell=False,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
+                stderr=subprocess.PIPE,
+            )
             stdout, stderr = proc.communicate()
             try:
                 # parse the slurm job id from the sbatch stdout
-                slurm_job_id = re.match(r'Submitted batch job (\d+)', stdout).groups()[0]
+                slurm_job_id = re.match(r"Submitted batch job (\d+)", stdout).groups()[
+                    0
+                ]
                 return slurm_job_id
             except AttributeError:
                 raise RuntimeError(
-                    'Could not submit sbatch job for workflow "{}": {}'.format(job_name, stderr))
+                    'Could not submit sbatch job for workflow "{}": {}'.format(
+                        job_name, stderr
+                    )
+                )
 
     @staticmethod
     def get_slurm_job_status(slurm_job_id):
@@ -312,6 +330,10 @@ class SlurmConnector(ProcessConnector):
         :return: a ProcessStatus type indicating the status
         """
         try:
-            return ProcessRunning if core_get_slurm_job_status(slurm_job_id) is None else ProcessStopped
+            return (
+                ProcessRunning
+                if core_get_slurm_job_status(slurm_job_id) is None
+                else ProcessStopped
+            )
         except RuntimeError as e:
             raise SlurmStatusNotRecognizedError(slurm_job_id, e)

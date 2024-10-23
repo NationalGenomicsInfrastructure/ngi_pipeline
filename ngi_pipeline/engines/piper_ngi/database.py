@@ -25,7 +25,7 @@ Session = sessionmaker()
 def get_db_session(database_path=None, config=None, config_file_path=None):
     """Return a session connection to the database."""
     if not database_path:
-        database_path = config['database']['record_tracking_db_path']
+        database_path = config["database"]["record_tracking_db_path"]
     database_abspath = os.path.abspath(database_path)
     if not os.path.exists(database_abspath):
         LOG.info('Creating local job tracking database "{}"'.format(database_path))
@@ -34,10 +34,15 @@ def get_db_session(database_path=None, config=None, config_file_path=None):
         try:
             engine = create_database_populate_schema(database_abspath)
         except OperationalError as e:
-            raise RuntimeError("Could not create database at {}: {}".format(database_abspath, e))
+            raise RuntimeError(
+                "Could not create database at {}: {}".format(database_abspath, e)
+            )
     else:
-        LOG.debug('Local job tracking database at "{}" already exists; '
-                  'connecting.'.format(database_abspath))
+        LOG.debug(
+            'Local job tracking database at "{}" already exists; ' "connecting.".format(
+                database_abspath
+            )
+        )
         engine = _init_engine(database_abspath)
     # Bind the Session to the engine
     Session.configure(bind=engine)
@@ -52,27 +57,31 @@ def get_db_session(database_path=None, config=None, config_file_path=None):
 def _init_engine(database_path):
     """Create the engine connection."""
     database_abspath = os.path.abspath(database_path)
-    return create_engine('sqlite:///{}'.format(database_abspath))
-    #return create_engine('sqlite:///:memory:', echo=True)
+    return create_engine("sqlite:///{}".format(database_abspath))
+    # return create_engine('sqlite:///:memory:', echo=True)
 
 
 def create_database_populate_schema(location):
     """Create the database and populate it with the schema."""
     engine = _init_engine(location)
     # Create the folder if necessary
-    if not os.path.exists( os.path.dirname(location) ):
+    if not os.path.exists(os.path.dirname(location)):
         try:
-            os.makedirs( os.path.dirname(location)) 
-        except (OSError):
-            LOG.info('Failed to create database directory at "{}", continuing without local database'.format(os.path.dirname(location)))
-            pass 
+            os.makedirs(os.path.dirname(location))
+        except OSError:
+            LOG.info(
+                'Failed to create database directory at "{}", continuing without local database'.format(
+                    os.path.dirname(location)
+                )
+            )
+            pass
     # Create the tables & sqlite file
     Base.metadata.create_all(engine)
     return engine
 
 
 class SampleAnalysis(Base):
-    __tablename__ = 'sampleanalysis'
+    __tablename__ = "sampleanalysis"
 
     project_id = Column(String(50), primary_key=True)
     project_name = Column(String(50))
@@ -86,10 +95,14 @@ class SampleAnalysis(Base):
     slurm_job_id = Column(Integer)
 
     def __repr__(self):
-        return ("<SampleRunAnalysis({project_id}/{sample_id}: job id "
-                "{job_id}, engine {engine}, "
-                "workflow {workflow})>".format(project_id=self.project_id,
-                                                           sample_id=self.sample_id,
-                                                           job_id=(self.slurm_job_id or self.process_id),
-                                                           engine=self.engine,
-                                                           workflow=self.workflow))
+        return (
+            "<SampleRunAnalysis({project_id}/{sample_id}: job id "
+            "{job_id}, engine {engine}, "
+            "workflow {workflow})>".format(
+                project_id=self.project_id,
+                sample_id=self.sample_id,
+                job_id=(self.slurm_job_id or self.process_id),
+                engine=self.engine,
+                workflow=self.workflow,
+            )
+        )

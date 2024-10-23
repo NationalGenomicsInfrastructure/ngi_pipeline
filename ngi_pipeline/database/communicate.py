@@ -4,6 +4,7 @@ from ngi_pipeline.log.loggers import minimal_logger
 
 LOG = minimal_logger(__name__)
 
+
 def get_project_id_from_name(project_name):
     """Given the project name ("Y.Mom_14_01") return the project ID ("P123")
 
@@ -21,13 +22,19 @@ def get_project_id_from_name(project_name):
         project_id = charon_session.project_get(project_name)
     except CharonError as e:
         if e.status_code == 404:
-            new_e = ValueError('Project "{}" missing from database: {}'.format(project_name, e))
+            new_e = ValueError(
+                'Project "{}" missing from database: {}'.format(project_name, e)
+            )
             new_e.status_code = 404
             raise new_e
         else:
             raise
     try:
-        return project_id['projectid']
+        return project_id["projectid"]
     except KeyError:
-        raise ValueError('Couldn\'t retrieve project id for project "{}"; '
-                         'this project\'s database entry has no "projectid" value.'.format(project_name))
+        raise ValueError(
+            'Couldn\'t retrieve project id for project "{}"; '
+            'this project\'s database entry has no "projectid" value.'.format(
+                project_name
+            )
+        )

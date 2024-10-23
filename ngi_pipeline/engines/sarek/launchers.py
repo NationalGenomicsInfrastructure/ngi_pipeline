@@ -2,7 +2,9 @@ import time
 
 from ngi_pipeline.engines.sarek.database import CharonConnector, TrackingConnector
 from ngi_pipeline.engines.sarek.exceptions import SampleNotValidForAnalysisError
-from ngi_pipeline.engines.sarek.local_process_tracking import update_charon_with_local_jobs_status
+from ngi_pipeline.engines.sarek.local_process_tracking import (
+    update_charon_with_local_jobs_status,
+)
 from ngi_pipeline.engines.sarek.models.sarek import SarekAnalysis
 from ngi_pipeline.engines.sarek.process import SlurmConnector
 
@@ -22,10 +24,12 @@ def analyze(analysis_object):
     slurm_project_id = analysis_object.config["environment"]["project_id"]
     slurm_mail_user = analysis_object.config["mail"]["recipient"]
     slurm_conector = SlurmConnector(
-        slurm_project_id, slurm_mail_user,
+        slurm_project_id,
+        slurm_mail_user,
         cwd="/scratch",
         slurm_mail_events="TIME_LIMIT_80",
-        **analysis_object.config.get("slurm", {}))
+        **analysis_object.config.get("slurm", {}),
+    )
 
     # get a CharonConnector that will interface with the Charon database
     charon_connector = CharonConnector(analysis_object.config, analysis_object.log)
@@ -34,14 +38,17 @@ def analyze(analysis_object):
     tracking_connector = TrackingConnector(analysis_object.config, analysis_object.log)
 
     # get a SarekAnlaysis instance that matches the analysis specified in Charon (e.g. germline)
-    analysis_object.log.info("Launching SAREK analysis for {}".format(analysis_object.project.project_id))
+    analysis_object.log.info(
+        "Launching SAREK analysis for {}".format(analysis_object.project.project_id)
+    )
     analysis_engine = SarekAnalysis.get_analysis_instance_for_project(
         analysis_object.project.project_id,
         analysis_object.config,
         analysis_object.log,
         charon_connector=charon_connector,
         tracking_connector=tracking_connector,
-        process_connector=slurm_conector)
+        process_connector=slurm_conector,
+    )
 
     # iterate over the samples in the project and launch analysis for each
     for sample_object in analysis_object.project:
@@ -56,4 +63,5 @@ def analyze(analysis_object):
         config=analysis_object.config,
         log=analysis_object.log,
         tracking_connector=tracking_connector,
-        charon_connector=charon_connector)
+        charon_connector=charon_connector,
+    )

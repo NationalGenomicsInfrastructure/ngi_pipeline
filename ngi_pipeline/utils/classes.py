@@ -10,6 +10,7 @@ class with_ngi_config(object):
     If no parsed config is passed, loads the config from the config_file_path argument.
     If config_file_path is not passed, tries to find it using a list of default locations.
     """
+
     def __init__(self, f):
         self.f = f
         # The idea is that ths will allow wrapped functions to keep their
@@ -36,10 +37,12 @@ class memoized(object):
     """
     Decorator, caches results of function calls.
     """
+
     def __init__(self, func):
-        self.func   = func
+        self.func = func
         self.cached = {}
         functools.update_wrapper(self, func)
+
     def __call__(self, *args):
         if not isinstance(args, collections.abc.Hashable):
             return self.func(*args)
@@ -49,8 +52,10 @@ class memoized(object):
             return_val = self.func(*args)
             self.cached[args] = return_val
             return return_val
+
     def __repr__(self):
         return self.func.__doc__
+
     # This ensures that attribute access (e.g. obj.attr)
     # goes through the __call__ function defined above
     def __get__(self, obj, objtype):

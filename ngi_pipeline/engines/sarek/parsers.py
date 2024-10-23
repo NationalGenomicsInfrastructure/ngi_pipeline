@@ -2,7 +2,10 @@ import json
 import locale
 import re
 
-from ngi_pipeline.engines.sarek.exceptions import ParserException, ParserMetricNotFoundException
+from ngi_pipeline.engines.sarek.exceptions import (
+    ParserException,
+    ParserMetricNotFoundException,
+)
 from six.moves import map
 from six.moves import zip
 
@@ -27,7 +30,11 @@ class ParserIntegrator(object):
         :return: None
         """
         if not isinstance(parser, ReportParser):
-            raise TypeError("{} is not a sublass of {}".format(type(parser).__name__, type(ReportParser).__name__))
+            raise TypeError(
+                "{} is not a sublass of {}".format(
+                    type(parser).__name__, type(ReportParser).__name__
+                )
+            )
         self.parsers.append(parser)
 
     def query_parsers(self, attribute, *args, **kwargs):
@@ -77,11 +84,12 @@ class ReportParser(object):
         self._raise_implementation_error("get_total_reads")
 
     def parse_result_file(self, result_file):
-        raise NotImplementedError("{} has not implemented result parsing".format(type(self).__name__))
+        raise NotImplementedError(
+            "{} has not implemented result parsing".format(type(self).__name__)
+        )
 
 
 class MultiQCParser(ReportParser):
-
     def data_source(self, tool, section):
         sources = self.data["report_data_sources"][tool][section]
         return list(sources.keys())
@@ -103,7 +111,9 @@ class MultiQCParser(ReportParser):
         pass
 
     def total_sequenced_reads(self):
-        source = [s for s in self.data_source("Samtools", "stats") if s.endswith(".real")].pop()
+        source = [
+            s for s in self.data_source("Samtools", "stats") if s.endswith(".real")
+        ].pop()
         source_data = self.multiqc_samtools_stats()[source]
         return source_data["raw_total_sequences"]
 
@@ -112,10 +122,11 @@ class QualiMapParser(ReportParser):
     """
     Parser for the QualiMap output result file.
     """
+
     AUTOSOMES = [str(i) for i in range(1, 23)]
 
     def parse_result_file(self, genome_results_file):
-        locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+        locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
         with open(genome_results_file) as fh:
             self._parse_genome_results_lines(fh)
 
@@ -132,15 +143,19 @@ class QualiMapParser(ReportParser):
         """
         mapped_bases = 0
         total_bases = 0
-        for key in ["chr{} coverage".format(chromosome) for chromosome in self.AUTOSOMES]:
+        for key in [
+            "chr{} coverage".format(chromosome) for chromosome in self.AUTOSOMES
+        ]:
             try:
                 data = self.data.get(key) or self.data[key[3:]]
                 mapped_bases += data["mapped bases"]
                 total_bases += data["length"]
             except KeyError as ke:
                 raise ParserException(
-                    self, "no coverage data parsed for {}: {}".format(key.split()[0], ke))
-        return float(1. * mapped_bases / total_bases)
+                    self,
+                    "no coverage data parsed for {}: {}".format(key.split()[0], ke),
+                )
+        return float(1.0 * mapped_bases / total_bases)
 
     def get_total_reads(self):
         """
@@ -165,7 +180,7 @@ class QualiMapParser(ReportParser):
         """
         # identify key = value assignments with numeric values
         try:
-            key, value = re.search(r'^\s+([^=]+) = ([0-9,.]+)', line).groups()
+            key, value = re.search(r"^\s+([^=]+) = ([0-9,.]+)", line).groups()
             value = locale.atof(value)
             key = key.strip()
             return {key: value}
@@ -187,7 +202,7 @@ class QualiMapParser(ReportParser):
         """
         # identify key = value assignments
         try:
-            key, value = re.search(r'^\s+([^=]+)= (.+)$', line).groups()
+            key, value = re.search(r"^\s+([^=]+)= (.+)$", line).groups()
             key, value = list(map(str.strip, [key, value]))
             return {key: value}
         except AttributeError:
@@ -206,7 +221,7 @@ class QualiMapParser(ReportParser):
         """
         # identify cumulative coverage calculations
         try:
-            value, key = re.search(r'([0-9.]+)%.*>= ([0-9]+X)', line).groups()
+            value, key = re.search(r"([0-9.]+)%.*>= ([0-9]+X)", line).groups()
             value = locale.atof(value)
             return {key: value}
         except AttributeError:
@@ -224,7 +239,9 @@ class QualiMapParser(ReportParser):
         """
         # identify contig coverage
         try:
-            values = re.search(r'^\s+(\S+)\s+([0-9]+)\s+([0-9]+)\s+(\S+)\s+(\S+)\s*$', line).groups()
+            values = re.search(
+                r"^\s+(\S+)\s+([0-9]+)\s+([0-9]+)\s+(\S+)\s+(\S+)\s*$", line
+            ).groups()
             key = "{} coverage".format(values[0])
             value = dict()
             value["contig"] = values[0]
@@ -253,11 +270,13 @@ class QualiMapParser(ReportParser):
         :return: the assignment as a dict returned by the methods above, or an empty dict if no assignment  could be
         parsed
         """
-        return self._parse_numeric_assignment(line) or \
-               self._parse_assignment(line) or \
-               self._parse_cumulative_coverage(line) or \
-               self._parse_contig_coverage(line) or \
-               dict()
+        return (
+            self._parse_numeric_assignment(line)
+            or self._parse_assignment(line)
+            or self._parse_cumulative_coverage(line)
+            or self._parse_contig_coverage(line)
+            or dict()
+        )
 
 
 class PicardMarkDuplicatesParser(ReportParser):
@@ -266,20 +285,18 @@ class PicardMarkDuplicatesParser(ReportParser):
     """
 
     def parse_result_file(self, metrics_file):
-        locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+        locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
         with open(metrics_file, "r") as fh:
             self._parse_metrics_handle(fh)
 
     def _parse_metrics_handle(self, fh):
-
         def __parse_library_lines():
             local_libraries = []
             local_line = next(fh).strip()
             while len(local_line) > 0 and not local_line.startswith("##"):
                 local_libraries.append(
-                    list(map(
-                        self._convert_to_unit,
-                        local_line.split())))
+                    list(map(self._convert_to_unit, local_line.split()))
+                )
                 local_line = next(fh).strip()
             return local_libraries
 
@@ -287,8 +304,12 @@ class PicardMarkDuplicatesParser(ReportParser):
             if line is None or not line.strip().startswith("## METRICS CLASS"):
                 continue
             headers = next(fh).strip().split()
-            self.data = {"metrics": [
-                dict(list(zip(headers, library))) for library in __parse_library_lines()]}
+            self.data = {
+                "metrics": [
+                    dict(list(zip(headers, library)))
+                    for library in __parse_library_lines()
+                ]
+            }
 
     @staticmethod
     def _convert_to_unit(raw_value):
@@ -315,13 +336,15 @@ class PicardMarkDuplicatesParser(ReportParser):
         to return the average across all libraries
         :return: The percent of duplication as a float
         """
-        libraries = [l for l in self.data.get("metrics", []) 
-                     if library is None 
-                     or l["LIBRARY"] == library]
-        total_reads = \
-            sum([lib["UNPAIRED_READS_EXAMINED"] for lib in libraries]) + \
-            2*sum([lib["READ_PAIRS_EXAMINED"] for lib in libraries])
-        duplicate_reads = \
-            sum([lib["UNPAIRED_READ_DUPLICATES"] for lib in libraries]) + \
-            2*sum([lib["READ_PAIR_DUPLICATES"] for lib in libraries])
-        return 100. * duplicate_reads / total_reads
+        libraries = [
+            l
+            for l in self.data.get("metrics", [])
+            if library is None or l["LIBRARY"] == library
+        ]
+        total_reads = sum(
+            [lib["UNPAIRED_READS_EXAMINED"] for lib in libraries]
+        ) + 2 * sum([lib["READ_PAIRS_EXAMINED"] for lib in libraries])
+        duplicate_reads = sum(
+            [lib["UNPAIRED_READ_DUPLICATES"] for lib in libraries]
+        ) + 2 * sum([lib["READ_PAIR_DUPLICATES"] for lib in libraries])
+        return 100.0 * duplicate_reads / total_reads

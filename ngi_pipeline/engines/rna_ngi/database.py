@@ -8,23 +8,29 @@ import contextlib
 
 Base = declarative_base()
 
+
 @with_ngi_config
 def get_engine(config=None, config_file_path=None):
     """generates a SQLAlchemy engine for PostGres with the CONF currently used
     :returns: the SQLAlchemy engine"""
-    uri=None
+    uri = None
     try:
-        uri="sqlite:///{db}".format(db=config['database']['record_tracking_db_path'])
+        uri = "sqlite:///{db}".format(db=config["database"]["record_tracking_db_path"])
     except KeyError as e:
-        raise Exception("The configuration file seems to be missing a required parameter. Please read the README.md. Missing key : {}".format(e.message))
+        raise Exception(
+            "The configuration file seems to be missing a required parameter. Please read the README.md. Missing key : {}".format(
+                e.message
+            )
+        )
     return create_engine(uri)
+
 
 @contextlib.contextmanager
 def get_session():
     """Generates a SQLAlchemy session based on the CONF
     :returns: the SQLAlchemy session
     """
-    engine=get_engine()
+    engine = get_engine()
     Base.metadata.bind = engine
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
@@ -35,7 +41,7 @@ def get_session():
 
 
 class ProjectAnalysis(Base):
-    __tablename__ = 'projectanalysis'
+    __tablename__ = "projectanalysis"
 
     project_id = Column(String(50), primary_key=True)
     project_name = Column(String(50))
@@ -47,9 +53,13 @@ class ProjectAnalysis(Base):
     run_mode = Column(String(50))
 
     def __repr__(self):
-        return ("<ProjectAnalysis({project_id}/: job id "
+        return (
+            "<ProjectAnalysis({project_id}/: job id "
             "{job_id}, engine {engine}, "
-            "workflow {workflow})>".format(project_id=self.project_id,
-            job_id=(self.job_id),
-            engine=self.engine,
-            workflow=self.workflow))
+            "workflow {workflow})>".format(
+                project_id=self.project_id,
+                job_id=(self.job_id),
+                engine=self.engine,
+                workflow=self.workflow,
+            )
+        )

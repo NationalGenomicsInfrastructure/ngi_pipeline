@@ -16,6 +16,7 @@ class DiskTrackingSession(object):
     This is an object to replace the SQLAlchemy object injected into the TrackingConnector, in order to replace the
     database connections
     """
+
     def __init__(self, analyses=None):
         self.analyses = analyses or list()
 
@@ -39,7 +40,9 @@ class DiskTrackingSession(object):
         return self
 
 
-def update_charon_with_sample(db_session, project_base_path, project_sample_dir, limit_to_sample):
+def update_charon_with_sample(
+    db_session, project_base_path, project_sample_dir, limit_to_sample
+):
     project_analysis_dir = os.path.dirname(project_sample_dir)
     project_id = os.path.basename(project_analysis_dir)
     sample_id = os.path.basename(project_sample_dir)
@@ -58,49 +61,46 @@ def update_charon_with_sample(db_session, project_base_path, project_sample_dir,
             project_base_path=project_base_path,
             workflow="SarekGermlineAnalysis",
             engine="sarek",
-            process_id=999999)
+            process_id=999999,
+        )
     )
 
+
 @with_ngi_config
-def update_charon_with_project(project, sample=None, config=None, config_file_path=None):
+def update_charon_with_project(
+    project, sample=None, config=None, config_file_path=None
+):
     project_base_path = os.path.join(
         config["analysis"]["base_root"],
         config["analysis"]["upps_root"],
-        config["analysis"]["top_dir"])
+        config["analysis"]["top_dir"],
+    )
 
-    project_analysis_dir = os.path.join(
-        project_base_path,
-        "ANALYSIS",
-        project)
+    project_analysis_dir = os.path.join(project_base_path, "ANALYSIS", project)
 
     db_session = DiskTrackingSession()
 
     for project_sample in os.listdir(project_analysis_dir):
         sample_path = os.path.join(project_analysis_dir, project_sample)
-        update_charon_with_sample(
-            db_session,
-            project_base_path,
-            sample_path,
-            sample)
+        update_charon_with_sample(db_session, project_base_path, sample_path, sample)
 
-    tracking_connector = TrackingConnector(
-        config,
-        LOG,
-        tracking_session=db_session)
+    tracking_connector = TrackingConnector(config, LOG, tracking_session=db_session)
     local_process_tracking.update_charon_with_local_jobs_status(
-        config=config,
-        log=LOG,
-        tracking_connector=tracking_connector)
+        config=config, log=LOG, tracking_connector=tracking_connector
+    )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Update Charon with Sarek analysis status and analysis results for a project independent of the "
-                    "local processing db")
+        "local processing db"
+    )
 
     parser.add_argument("-p", "--project", required=True)
     parser.add_argument("-s", "--sample", required=False)
     parser.add_argument("-c", "--config", required=False)
 
     args = parser.parse_args()
-    update_charon_with_project(args.project, sample=args.sample, config_file_path=args.config)
+    update_charon_with_project(
+        args.project, sample=args.sample, config_file_path=args.config
+    )

@@ -10,7 +10,6 @@ from ngi_pipeline.utils.filesystem import recreate_project_from_filesystem
 
 
 class TestIntegration(unittest.TestCase):
-
     RUNFOLDER_NAME = "180223_A00123_0012_AABC123DXX"
 
     @staticmethod
@@ -41,22 +40,32 @@ class TestIntegration(unittest.TestCase):
     def test_recreate_project_from_filesystem(self):
         project_obj = self.projects[0]
         recreated_project = recreate_project_from_filesystem(
-            project_dir=os.path.join(self.datadir, project_obj.dirname))
+            project_dir=os.path.join(self.datadir, project_obj.dirname)
+        )
         self.assertEqual(project_obj, recreated_project)
 
     @mock.patch("ngi_pipeline.conductor.launchers.CharonSession", autospec=True)
     @mock.patch("ngi_pipeline.conductor.classes.CharonSession", autospec=True)
     @mock.patch(
         "ngi_pipeline.engines.sarek."
-        "local_process_tracking.update_charon_with_local_jobs_status", autospec=True)
-    def test_launch_analysis(self, process_tracking_mock, charon_session_classes_mock, charon_session_launchers_mock):
+        "local_process_tracking.update_charon_with_local_jobs_status",
+        autospec=True,
+    )
+    def test_launch_analysis(
+        self,
+        process_tracking_mock,
+        charon_session_classes_mock,
+        charon_session_launchers_mock,
+    ):
         charon_classes_mock = charon_session_classes_mock.return_value
         charon_classes_mock.project_get.return_value = {
-            "best_practice_analysis": list(self.config["analysis"]["best_practice_analysis"].keys())[0]}
+            "best_practice_analysis": list(
+                self.config["analysis"]["best_practice_analysis"].keys()
+            )[0]
+        }
 
         charon_launchers_mock = charon_session_launchers_mock.return_value
-        charon_launchers_mock.project_get.return_value = {
-            "status": "OPEN"}
+        charon_launchers_mock.project_get.return_value = {"status": "OPEN"}
 
         with mock.patch("ngi_pipeline.engines.sarek.analyze") as analyze_mock:
             project_obj = self.projects[0]

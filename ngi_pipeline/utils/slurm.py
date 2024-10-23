@@ -9,6 +9,7 @@ from six.moves import map
 
 LOG = minimal_logger(__name__)
 
+
 def kill_slurm_job_by_id(slurm_job_id):
     """Try to kill a slurm job based on its job ID.
 
@@ -19,24 +20,27 @@ def kill_slurm_job_by_id(slurm_job_id):
     """
     LOG.info("Attempting to kill slurm job id {}".format(slurm_job_id))
     try:
-        subprocess.check_call(shlex.split('scancel {}'.format(slurm_job_id)))
+        subprocess.check_call(shlex.split("scancel {}".format(slurm_job_id)))
         LOG.info('slurm job id "{}" killed.'.format(slurm_job_id))
         return True
     except (OSError, subprocess.CalledProcessError) as e:
         raise RuntimeError('Could not kill job "{}": {}"'.format(slurm_job_id, e))
 
-SLURM_EXIT_CODES = {"PENDING": None,
-                    "RUNNING": None,
-                    "RESIZING": None,
-                    "SUSPENDED": None,
-                    "COMPLETED": 0,
-                    "CANCELLED": 1,
-                    "FAILED": 1,
-                    "TIMEOUT": 1,
-                    "PREEMPTED": 1,
-                    "BOOT_FAIL": 1,
-                    "NODE_FAIL": 1,
-                   }
+
+SLURM_EXIT_CODES = {
+    "PENDING": None,
+    "RUNNING": None,
+    "RESIZING": None,
+    "SUSPENDED": None,
+    "COMPLETED": 0,
+    "CANCELLED": 1,
+    "FAILED": 1,
+    "TIMEOUT": 1,
+    "PREEMPTED": 1,
+    "BOOT_FAIL": 1,
+    "NODE_FAIL": 1,
+}
+
 
 def get_slurm_job_status(slurm_job_id):
     """Gets the State of a SLURM job and returns it as an integer (or None).
