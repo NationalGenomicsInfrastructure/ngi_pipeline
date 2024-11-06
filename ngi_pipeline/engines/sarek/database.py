@@ -1,13 +1,28 @@
 import contextlib
 
 from ngi_pipeline.database.classes import CharonError, CharonSession
-from ngi_pipeline.engines.sarek.process import ProcessRunning, ProcessExitStatusSuccessful, \
-    ProcessExitStatusFailed, ProcessExitStatusUnknown, ProcessConnector, SlurmConnector
+from ngi_pipeline.engines.sarek.process import (
+    ProcessRunning,
+    ProcessExitStatusSuccessful,
+    ProcessExitStatusFailed,
+    ProcessExitStatusUnknown,
+    ProcessConnector,
+    SlurmConnector,
+)
 from ngi_pipeline.engines.piper_ngi.database import get_db_session, SampleAnalysis
-from ngi_pipeline.engines.sarek.exceptions import AnalysisPipelineNotSpecifiedError, DatabaseProjectException, \
-    BestPracticeAnalysisNotSpecifiedError, SampleLookupError, AnalysisStatusForProcessStatusNotFoundError, \
-    SampleAnalysisStatusNotFoundError, SampleAnalysisStatusNotSetError, AlignmentStatusForAnalysisStatusNotFoundError, \
-    SampleUpdateError, SeqrunUpdateError, AnalysisReferenceNotSpecifiedError
+from ngi_pipeline.engines.sarek.exceptions import (
+    AnalysisPipelineNotSpecifiedError,
+    DatabaseProjectException,
+    BestPracticeAnalysisNotSpecifiedError,
+    SampleLookupError,
+    AnalysisStatusForProcessStatusNotFoundError,
+    SampleAnalysisStatusNotFoundError,
+    SampleAnalysisStatusNotSetError,
+    AlignmentStatusForAnalysisStatusNotFoundError,
+    SampleUpdateError,
+    SeqrunUpdateError,
+    AnalysisReferenceNotSpecifiedError,
+)
 
 
 class CharonConnector(object):
@@ -21,7 +36,7 @@ class CharonConnector(object):
         ProcessRunning: "UNDER_ANALYSIS",
         ProcessExitStatusSuccessful: "ANALYZED",
         ProcessExitStatusFailed: "FAILED",
-        ProcessExitStatusUnknown: "FAILED"
+        ProcessExitStatusUnknown: "FAILED",
     }
 
     # mapping between an analysis status and the corresponding alignment status to record in Charon
@@ -29,7 +44,7 @@ class CharonConnector(object):
         "TO_ANALYZE": "NOT_RUNNING",
         "UNDER_ANALYSIS": "RUNNING",
         "ANALYZED": "DONE",
-        "FAILED": "FAILED"
+        "FAILED": "FAILED",
     }
 
     def __init__(self, config, log, charon_session=None):
@@ -54,19 +69,29 @@ class CharonConnector(object):
             raise exception
 
     def analysis_pipeline(self, projectid):
-        return self._fetch_project_field(projectid, "pipeline", AnalysisPipelineNotSpecifiedError)
+        return self._fetch_project_field(
+            projectid, "pipeline", AnalysisPipelineNotSpecifiedError
+        )
 
     def analysis_reference(self, projectid):
-        return self._fetch_project_field(projectid, "reference", AnalysisReferenceNotSpecifiedError)
+        return self._fetch_project_field(
+            projectid, "reference", AnalysisReferenceNotSpecifiedError
+        )
 
     def best_practice_analysis(self, projectid):
-        return self._fetch_project_field(projectid, "best_practice_analysis", BestPracticeAnalysisNotSpecifiedError)
+        return self._fetch_project_field(
+            projectid, "best_practice_analysis", BestPracticeAnalysisNotSpecifiedError
+        )
 
     def sample_analysis_status(self, projectid, sampleid):
         try:
-            return self.charon_session.sample_get(projectid, sampleid)["analysis_status"]
+            return self.charon_session.sample_get(projectid, sampleid)[
+                "analysis_status"
+            ]
         except (KeyError, CharonError) as e:
-            analysis_status_exception = SampleAnalysisStatusNotFoundError(projectid, sampleid, reason=e)
+            analysis_status_exception = SampleAnalysisStatusNotFoundError(
+                projectid, sampleid, reason=e
+            )
             self.log.error(analysis_status_exception)
             raise analysis_status_exception
 
@@ -77,24 +102,30 @@ class CharonConnector(object):
             sample_exception = SampleLookupError(
                 projectid,
                 sampleid,
-                reason="qc status for libprep '{}' could not be fetched: {}".format(libprepid, e))
+                reason="qc status for libprep '{}' could not be fetched: {}".format(
+                    libprepid, e
+                ),
+            )
             self.log.error(sample_exception)
             raise sample_exception
 
     def seqrun_alignment_status(self, projectid, sampleid, libprepid, seqrunid):
         try:
-            return self.charon_session.seqrun_get(projectid, sampleid, libprepid, seqrunid)["alignment_status"]
+            return self.charon_session.seqrun_get(
+                projectid, sampleid, libprepid, seqrunid
+            )["alignment_status"]
         except (KeyError, CharonError) as e:
             sample_exception = SampleLookupError(
                 projectid,
                 sampleid,
                 reason="alignment status for libprep '{}' and seqrun '{}' could not be fetched: {}".format(
-                    libprepid, seqrunid, e))
+                    libprepid, seqrunid, e
+                ),
+            )
             self.log.error(sample_exception)
             raise sample_exception
 
-    def set_sample_analysis_status(
-            self, status, *args, **kwargs):
+    def set_sample_analysis_status(self, status, *args, **kwargs):
         """
         Set the analysis status on a sample to the specified string. If recurse is True, the alignment status on
         the affected seqruns will be set as well (to the string corresponding to the analysis status according to
@@ -108,29 +139,33 @@ class CharonConnector(object):
         """
         try:
             kwargs["sample_update_kwargs"] = {"analysis_status": status}
-            kwargs["seqrun_update_kwargs"] = {"alignment_status": self.alignment_status_from_analysis_status(status)}
-            return self.set_sample_attribute(
-                *args,
-                **kwargs)
+            kwargs["seqrun_update_kwargs"] = {
+                "alignment_status": self.alignment_status_from_analysis_status(status)
+            }
+            return self.set_sample_attribute(*args, **kwargs)
         except (SampleUpdateError, SeqrunUpdateError) as e:
-            analysis_status_exception = SampleAnalysisStatusNotSetError(e.projectid, e.sampleid, status, reason=e)
+            analysis_status_exception = SampleAnalysisStatusNotSetError(
+                e.projectid, e.sampleid, status, reason=e
+            )
             self.log.error(analysis_status_exception)
             raise analysis_status_exception
 
-    def set_sample_duplication(
-            self, pct_duplication, *args, **kwargs):
+    def set_sample_duplication(self, pct_duplication, *args, **kwargs):
         return self._set_sample_metric(
-            *args, sample_update_kwargs={"duplication_pc": pct_duplication}, **kwargs)
+            *args, sample_update_kwargs={"duplication_pc": pct_duplication}, **kwargs
+        )
 
-    def set_sample_autosomal_coverage(
-            self, autosomal_coverage, *args, **kwargs):
+    def set_sample_autosomal_coverage(self, autosomal_coverage, *args, **kwargs):
         return self._set_sample_metric(
-            *args, sample_update_kwargs={"total_autosomal_coverage": autosomal_coverage}, **kwargs)
+            *args,
+            sample_update_kwargs={"total_autosomal_coverage": autosomal_coverage},
+            **kwargs,
+        )
 
-    def set_sample_total_reads(
-            self, total_reads, *args, **kwargs):
+    def set_sample_total_reads(self, total_reads, *args, **kwargs):
         return self._set_sample_metric(
-            *args, sample_update_kwargs={"total_sequenced_reads": total_reads}, **kwargs)
+            *args, sample_update_kwargs={"total_sequenced_reads": total_reads}, **kwargs
+        )
 
     def _set_sample_metric(self, *args, **kwargs):
         try:
@@ -140,8 +175,15 @@ class CharonConnector(object):
             raise
 
     def set_sample_attribute(
-            self, projectid, sampleid, sample_update_kwargs, seqrun_update_kwargs=None, recurse=False,
-            restrict_to_libpreps=None, restrict_to_seqruns=None):
+        self,
+        projectid,
+        sampleid,
+        sample_update_kwargs,
+        seqrun_update_kwargs=None,
+        recurse=False,
+        restrict_to_libpreps=None,
+        restrict_to_seqruns=None,
+    ):
         """
         Update a sample according to the `sample_update_kwargs` dict. If recurse is True, the affected seqruns will be
         updated according to the `seqrun_update_kwargs` dict as well. Optionally, the libpreps and seqruns to
@@ -165,13 +207,19 @@ class CharonConnector(object):
             if recurse:
                 # iterate over all libpreps, taking the restrict_to_libpreps argument into account
                 for libprep in self.sample_libpreps(
-                        projectid, sampleid, restrict_to=restrict_to_libpreps):
+                    projectid, sampleid, restrict_to=restrict_to_libpreps
+                ):
                     libprepid = libprep["libprepid"]
                     # iterate over the seqruns for the libprep and restrict to the specified seqruns if the libprep is
                     # a key in the restrict_to_seqruns dict
                     for seqrun in self.libprep_seqruns(
-                            projectid, sampleid, libprepid,
-                            restrict_to=restrict_to_seqruns.get(libprepid) if restrict_to_seqruns else None):
+                        projectid,
+                        sampleid,
+                        libprepid,
+                        restrict_to=restrict_to_seqruns.get(libprepid)
+                        if restrict_to_seqruns
+                        else None,
+                    ):
                         try:
                             # set the alignment status on the seqrun according to the mapping
                             self.charon_session.seqrun_update(
@@ -179,11 +227,20 @@ class CharonConnector(object):
                                 sampleid,
                                 libprepid,
                                 seqrun["seqrunid"],
-                                **seqrun_update_kwargs)
+                                **seqrun_update_kwargs,
+                            )
                         except CharonError as e:
-                            raise SeqrunUpdateError(projectid, sampleid, libprepid, seqrun["seqrunid"], reason=e)
+                            raise SeqrunUpdateError(
+                                projectid,
+                                sampleid,
+                                libprepid,
+                                seqrun["seqrunid"],
+                                reason=e,
+                            )
             # lastly, update the analysis status of the sample
-            return self.charon_session.sample_update(projectid, sampleid, **sample_update_kwargs)
+            return self.charon_session.sample_update(
+                projectid, sampleid, **sample_update_kwargs
+            )
         except CharonError as e:
             raise SampleUpdateError(projectid, sampleid, reason=e)
 
@@ -197,8 +254,13 @@ class CharonConnector(object):
         :return: list of libpreps, represented as dicts, belonging to the specified sample
         """
         try:
-            return [x for x in self.charon_session.sample_get_libpreps(projectid, sampleid)["libpreps"] 
-                    if restrict_to is None or x["libprepid"] in restrict_to]
+            return [
+                x
+                for x in self.charon_session.sample_get_libpreps(projectid, sampleid)[
+                    "libpreps"
+                ]
+                if restrict_to is None or x["libprepid"] in restrict_to
+            ]
         except (KeyError, CharonError) as e:
             sample_libpreps_exception = SampleLookupError(projectid, sampleid, reason=e)
             self.log.error(sample_libpreps_exception)
@@ -215,8 +277,13 @@ class CharonConnector(object):
         :return: list of seqruns, represented as dicts, belonging to the specified libprep
         """
         try:
-            return [x for x in self.charon_session.libprep_get_seqruns(projectid, sampleid, libprepid)["seqruns"] 
-                    if restrict_to is None or x["seqrunid"] in restrict_to]
+            return [
+                x
+                for x in self.charon_session.libprep_get_seqruns(
+                    projectid, sampleid, libprepid
+                )["seqruns"]
+                if restrict_to is None or x["seqrunid"] in restrict_to
+            ]
         except (KeyError, CharonError) as e:
             libprep_seqruns_exception = SampleLookupError(projectid, sampleid, reason=e)
             self.log.error(libprep_seqruns_exception)
@@ -233,7 +300,9 @@ class CharonConnector(object):
         try:
             return self._ANALYSIS_STATUS_FROM_PROCESS_STATUS[process_status]
         except KeyError:
-            charon_status_error = AnalysisStatusForProcessStatusNotFoundError(process_status)
+            charon_status_error = AnalysisStatusForProcessStatusNotFoundError(
+                process_status
+            )
             self.log.error(charon_status_error)
             raise charon_status_error
 
@@ -249,7 +318,9 @@ class CharonConnector(object):
         try:
             return self._ALIGNMENT_STATUS_FROM_ANALYSIS_STATUS[analysis_status]
         except KeyError:
-            status_error = AlignmentStatusForAnalysisStatusNotFoundError(analysis_status)
+            status_error = AlignmentStatusForAnalysisStatusNotFoundError(
+                analysis_status
+            )
             self.log.error(status_error)
             raise status_error
 
@@ -263,7 +334,7 @@ class TrackingConnector(object):
     # mapping between process connector types and the corresponding db field storing the job identifier
     PIDFIELD_FROM_PROCESS_CONNECTOR_TYPE = {
         ProcessConnector: "process_id",
-        SlurmConnector: "slurm_job_id"
+        SlurmConnector: "slurm_job_id",
     }
 
     def __init__(self, config, log, tracking_session=None):
@@ -284,11 +355,14 @@ class TrackingConnector(object):
         Subclassing the SampleAnalysis model from ngi_pipeline.engines.piper_ngi.database so that we can override
         stuff if necessary
         """
+
         pass
 
     @staticmethod
     def pidfield_from_process_connector_type(process_connector_type):
-        return TrackingConnector.PIDFIELD_FROM_PROCESS_CONNECTOR_TYPE[process_connector_type]
+        return TrackingConnector.PIDFIELD_FROM_PROCESS_CONNECTOR_TYPE[
+            process_connector_type
+        ]
 
     @contextlib.contextmanager
     def db_session(self):
@@ -304,7 +378,15 @@ class TrackingConnector(object):
                 yield self.tracking_session
 
     def record_process_sample(
-            self, projectid, sampleid, project_base_path, analysis_type, engine, pid, process_connector_type):
+        self,
+        projectid,
+        sampleid,
+        project_base_path,
+        analysis_type,
+        engine,
+        pid,
+        process_connector_type,
+    ):
         """
         Add the processing details for a sample as a record in the tracking database. The database model is defined
         by the _SampleAnalysis class.
@@ -327,7 +409,8 @@ class TrackingConnector(object):
             project_base_path=project_base_path,
             workflow=analysis_type,
             engine=engine,
-            **{pidfield: pid})
+            **{pidfield: pid},
+        )
 
         with self.db_session() as db_session:
             db_session.add(db_obj)
@@ -348,7 +431,9 @@ class TrackingConnector(object):
         that are tracked in the local tracking database
         """
         with self.db_session() as db_session:
-            for analysis in db_session.query(self._SampleAnalysis)\
-                    .filter(self._SampleAnalysis.engine == "sarek")\
-                    .all():
+            for analysis in (
+                db_session.query(self._SampleAnalysis)
+                .filter(self._SampleAnalysis.engine == "sarek")
+                .all()
+            ):
                 yield analysis

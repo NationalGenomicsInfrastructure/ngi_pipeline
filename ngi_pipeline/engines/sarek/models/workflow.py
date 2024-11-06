@@ -2,20 +2,26 @@ import os
 from string import Template
 
 from ngi_pipeline.engines.sarek.exceptions import ParserException
-from ngi_pipeline.engines.sarek.parsers import QualiMapParser, PicardMarkDuplicatesParser
+from ngi_pipeline.engines.sarek.parsers import (
+    QualiMapParser,
+    PicardMarkDuplicatesParser,
+)
 
 
 class WorkflowStep(object):
     """
     The WorkflowStepMixin is a basic utility class that provides functionality needed by workflow steps.
     """
+
     def __init__(self, command, hyphen="--", **kwargs):
         # create a dict with parameters based on the passed key=value arguments
         # expand any parameters passed as list items into a ","-separated string
         self.command = command
         self.hyphen = hyphen
         self.parameters = dict()
-        self.parameters = {k: v if type(v) is not list else ",".join(v) for k, v in kwargs.items()}
+        self.parameters = {
+            k: v if type(v) is not list else ",".join(v) for k, v in kwargs.items()
+        }
 
     def _append_argument(self, base_string, name, hyphen="--"):
         """
@@ -45,10 +51,12 @@ class WorkflowStep(object):
         """
         template_string = "${command}"
         for argument_name in self.parameters.keys():
-            template_string = self._append_argument(template_string, argument_name, hyphen=self.hyphen)
+            template_string = self._append_argument(
+                template_string, argument_name, hyphen=self.hyphen
+            )
         command_line = Template(template_string).substitute(
-            command=self.command,
-            **self.parameters)
+            command=self.command, **self.parameters
+        )
         return command_line
 
     @classmethod
@@ -69,7 +77,9 @@ class NextflowStep(WorkflowStep):
         :param subcommand: the subcommand to pass to Nextflow (e.g. run)
         :param kwargs: additional Nextflow parameters to be specified on the command line
         """
-        super(NextflowStep, self).__init__("{} {}".format(command, subcommand), hyphen="-", **kwargs)
+        super(NextflowStep, self).__init__(
+            "{} {}".format(command, subcommand), hyphen="-", **kwargs
+        )
 
 
 class SarekWorkflowStep(WorkflowStep):
@@ -90,7 +100,11 @@ class SarekWorkflowStep(WorkflowStep):
         super(SarekWorkflowStep, self).__init__(command, hyphen="--", **kwargs)
 
     def sarek_step(self):
-        raise NotImplementedError("The Sarek workflow step definition for {} has not been defined".format(type(self)))
+        raise NotImplementedError(
+            "The Sarek workflow step definition for {} has not been defined".format(
+                type(self)
+            )
+        )
 
 
 class SarekMainStep(SarekWorkflowStep):
@@ -113,22 +127,39 @@ class SarekMainStep(SarekWorkflowStep):
         report_dir = os.path.join(
             analysis_sample.sample_analysis_results_dir(),
             "Reports",
-            analysis_sample.sampleid)
+            analysis_sample.sampleid,
+        )
         # MarkDuplicates output files may be named differently depending on if the pipeline was started with a single
         # fastq file pair or multiple file pairs
         markdups_dir = os.path.join(report_dir, "MarkDuplicates")
         metric_files = [f for f in os.listdir(markdups_dir) if f.endswith(".metrics")]
         if not metric_files:
-            raise ParserException(cls, "no metrics file for MarkDuplicates found for sample {} in {}".format(
-                analysis_sample.sampleid, markdups_dir))
+            raise ParserException(
+                cls,
+                "no metrics file for MarkDuplicates found for sample {} in {}".format(
+                    analysis_sample.sampleid, markdups_dir
+                ),
+            )
         markdups_metrics_file = metric_files.pop()
         if metric_files:
-            raise ParserException(cls, "multiple metrics files for MarkDuplicates found for sample {} in {}".format(
-                analysis_sample.sampleid, markdups_dir))
+            raise ParserException(
+                cls,
+                "multiple metrics files for MarkDuplicates found for sample {} in {}".format(
+                    analysis_sample.sampleid, markdups_dir
+                ),
+            )
         return [
             [
                 QualiMapParser,
-                os.path.join(report_dir, "bamQC", "{}.recal".format(analysis_sample.sampleid), "genome_results.txt")],
+                os.path.join(
+                    report_dir,
+                    "bamQC",
+                    "{}.recal".format(analysis_sample.sampleid),
+                    "genome_results.txt",
+                ),
+            ],
             [
                 PicardMarkDuplicatesParser,
-                os.path.join(markdups_dir, markdups_metrics_file)]]
+                os.path.join(markdups_dir, markdups_metrics_file),
+            ],
+        ]

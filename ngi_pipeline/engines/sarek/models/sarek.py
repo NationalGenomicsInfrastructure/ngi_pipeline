@@ -2,13 +2,20 @@ import csv
 import os
 
 from ngi_pipeline.engines.sarek.database import CharonConnector, TrackingConnector
-from ngi_pipeline.engines.sarek.exceptions import BestPracticeAnalysisNotRecognized, SampleNotValidForAnalysisError
+from ngi_pipeline.engines.sarek.exceptions import (
+    BestPracticeAnalysisNotRecognized,
+    SampleNotValidForAnalysisError,
+)
 from ngi_pipeline.engines.sarek.models.resources import ReferenceGenome
 from ngi_pipeline.engines.sarek.models.sample import SarekAnalysisSample
 from ngi_pipeline.engines.sarek.models.workflow import NextflowStep, SarekMainStep
 from ngi_pipeline.engines.sarek.parsers import ParserIntegrator
-from ngi_pipeline.engines.sarek.process import ProcessConnector, ProcessRunning, ProcessExitStatusSuccessful, \
-    ProcessExitStatusFailed
+from ngi_pipeline.engines.sarek.process import (
+    ProcessConnector,
+    ProcessRunning,
+    ProcessExitStatusSuccessful,
+    ProcessExitStatusFailed,
+)
 from ngi_pipeline.utils.filesystem import safe_makedir
 
 
@@ -21,29 +28,23 @@ class SarekAnalysis(object):
     """
 
     DEFAULT_CONFIG = {
-        "nextflow": {
-            "profile": "uppmax",
-            "command": "nextflow",
-            "subcommand": "run"},
+        "nextflow": {"profile": "uppmax", "command": "nextflow", "subcommand": "run"},
         "sarek": {
             "command": os.path.join(
-                "/vulpes",
-                "ngi",
-                "production",
-                "latest",
-                "sw",
-                "sarek",
-                "workflow")}
+                "/vulpes", "ngi", "production", "latest", "sw", "sarek", "workflow"
+            )
+        },
     }
 
     def __init__(
-            self,
-            reference_genome,
-            config,
-            log,
-            charon_connector=None,
-            tracking_connector=None,
-            process_connector=None):
+        self,
+        reference_genome,
+        config,
+        log,
+        charon_connector=None,
+        tracking_connector=None,
+        process_connector=None,
+    ):
         """
         Create an instance of SarekAnalysis.
 
@@ -60,11 +61,17 @@ class SarekAnalysis(object):
         self.reference_genome = reference_genome
         self.config = config
         self.log = log
-        merged_configs = self.configure_analysis(opts={"sarek": {"genome": self.reference_genome}})
+        merged_configs = self.configure_analysis(
+            opts={"sarek": {"genome": self.reference_genome}}
+        )
         self.sarek_config = merged_configs["sarek"]
         self.nextflow_config = merged_configs["nextflow"]
-        self.charon_connector = charon_connector or CharonConnector(self.config, self.log)
-        self.tracking_connector = tracking_connector or TrackingConnector(self.config, self.log)
+        self.charon_connector = charon_connector or CharonConnector(
+            self.config, self.log
+        )
+        self.tracking_connector = tracking_connector or TrackingConnector(
+            self.config, self.log
+        )
         self.process_connector = process_connector or ProcessConnector(cwd=os.curdir)
 
     def __repr__(self):
@@ -88,17 +95,18 @@ class SarekAnalysis(object):
             merged_configs[section] = self.merge_configs(
                 self.DEFAULT_CONFIG.get(section, dict()),
                 config.get(section, dict()),
-                **opts.get(section, dict())
+                **opts.get(section, dict()),
             )
 
         # make sure to configure the correct genomes_base parameter if it's not set
         if self.reference_genome is not None:
             merged_configs["sarek"]["genomes_base"] = merged_configs["sarek"].get(
                 "genomes_base",
-                self.reference_genome.get_genomes_base_path(merged_configs["sarek"]))
+                self.reference_genome.get_genomes_base_path(merged_configs["sarek"]),
+            )
         # let's unset the genomes_base_paths item since we don't want it to show up on the command line
         try:
-            del(merged_configs["sarek"]["genomes_base_paths"])
+            del merged_configs["sarek"]["genomes_base_paths"]
         except KeyError:
             pass
         return merged_configs
@@ -139,13 +147,14 @@ class SarekAnalysis(object):
 
     @staticmethod
     def get_analysis_instance_for_workflow(
-            workflow,
-            config,
-            log,
-            reference_genome=None,
-            charon_connector=None,
-            tracking_connector=None,
-            process_connector=None):
+        workflow,
+        config,
+        log,
+        reference_genome=None,
+        charon_connector=None,
+        tracking_connector=None,
+        process_connector=None,
+    ):
         """
         Factory method returning a SarekAnalysis subclass instance corresponding to the best practice analysis specified
         by the supplied workflow name.
@@ -169,16 +178,18 @@ class SarekAnalysis(object):
             log,
             charon_connector=charon_connector,
             tracking_connector=tracking_connector,
-            process_connector=process_connector)
+            process_connector=process_connector,
+        )
 
     @staticmethod
     def get_analysis_instance_for_project(
-            projectid,
-            config,
-            log,
-            charon_connector=None,
-            tracking_connector=None,
-            process_connector=None):
+        projectid,
+        config,
+        log,
+        charon_connector=None,
+        tracking_connector=None,
+        process_connector=None,
+    ):
         """
         Factory method returning a SarekAnalysis subclass instance corresponding to the best practice analysis specified
         for the supplied project.
@@ -217,18 +228,21 @@ class SarekAnalysis(object):
                 log,
                 charon_connector,
                 tracking_connector,
-                process_connector)
+                process_connector,
+            )
         elif analysis_type in ["exome_somatic", "wgs_somatic"]:
             raise NotImplementedError(
-                "best-practice.analysis for {} is not implemented".format(analysis_type))
+                "best-practice.analysis for {} is not implemented".format(analysis_type)
+            )
         raise BestPracticeAnalysisNotRecognized(analysis_type)
 
     def status_should_be_started(
-            self,
-            status,
-            restart_failed_jobs=False,
-            restart_finished_jobs=False,
-            restart_running_jobs=False):
+        self,
+        status,
+        restart_failed_jobs=False,
+        restart_finished_jobs=False,
+        restart_running_jobs=False,
+    ):
         """
         Takes a status string (e.g. the analysis_status or alignment_status as stored in Charon) and decides whether
         analysis should be started based on the status, taking the value of the restart flags into account.
@@ -239,14 +253,23 @@ class SarekAnalysis(object):
         :param restart_running_jobs: if True, jobs marked as running are ok to start (default is False)
         :return: True if the analysis is ok to start or False otherwise
         """
+
         def _charon_status_list_from_process_status(process_status):
-            analysis_status = self.charon_connector.analysis_status_from_process_status(process_status)
-            alignment_status = self.charon_connector.alignment_status_from_analysis_status(analysis_status)
+            analysis_status = self.charon_connector.analysis_status_from_process_status(
+                process_status
+            )
+            alignment_status = (
+                self.charon_connector.alignment_status_from_analysis_status(
+                    analysis_status
+                )
+            )
             return analysis_status, alignment_status
 
         if status in _charon_status_list_from_process_status(ProcessRunning):
             return restart_running_jobs
-        if status in _charon_status_list_from_process_status(ProcessExitStatusSuccessful):
+        if status in _charon_status_list_from_process_status(
+            ProcessExitStatusSuccessful
+        ):
             return restart_finished_jobs
         if status in _charon_status_list_from_process_status(ProcessExitStatusFailed):
             return restart_failed_jobs
@@ -274,12 +297,20 @@ class SarekAnalysis(object):
             restart_options={
                 "restart_failed_jobs": analysis_object.restart_failed_jobs,
                 "restart_finished_jobs": analysis_object.restart_finished_jobs,
-                "restart_running_jobs": analysis_object.restart_running_jobs})
+                "restart_running_jobs": analysis_object.restart_running_jobs,
+            },
+        )
 
         if not self.sample_should_be_started(
-                analysis_sample.projectid, analysis_sample.sampleid, analysis_sample.restart_options):
+            analysis_sample.projectid,
+            analysis_sample.sampleid,
+            analysis_sample.restart_options,
+        ):
             raise SampleNotValidForAnalysisError(
-                analysis_sample.projectid, analysis_sample.sampleid, "nothing to analyze")
+                analysis_sample.projectid,
+                analysis_sample.sampleid,
+                "nothing to analyze",
+            )
 
         # get the paths needed for the analysis
         self.create_tsv_file(analysis_sample)
@@ -291,10 +322,14 @@ class SarekAnalysis(object):
             working_dir=analysis_sample.sample_analysis_path(),
             exit_code_path=analysis_sample.sample_analysis_exit_code_path(),
             job_name="{}-{}-{}".format(
-                analysis_object.project.name,
-                sample_object.name,
-                str(self)))
-        self.log.info("launched '{}', with {}, pid: {}".format(cmd, type(self.process_connector), pid))
+                analysis_object.project.name, sample_object.name, str(self)
+            ),
+        )
+        self.log.info(
+            "launched '{}', with {}, pid: {}".format(
+                cmd, type(self.process_connector), pid
+            )
+        )
 
         # record the analysis details in the local tracking database
         self.tracking_connector.record_process_sample(
@@ -304,12 +339,10 @@ class SarekAnalysis(object):
             str(self),
             "sarek",
             pid,
-            type(self.process_connector))
+            type(self.process_connector),
+        )
 
-    def sample_should_be_started(self,
-                                 projectid,
-                                 sampleid,
-                                 restart_options):
+    def sample_should_be_started(self, projectid, sampleid, restart_options):
         """
         Decides whether the analysis for a sample should be started based on the analysis status recorded in Charon
         and taking the value of the restart flags into account.
@@ -320,21 +353,25 @@ class SarekAnalysis(object):
         sample
         :return: True if the analysis for the sample is ok to start or False otherwise
         """
-        analysis_status = self.charon_connector.sample_analysis_status(projectid, sampleid)
-        should_be_started = self.status_should_be_started(analysis_status, **restart_options)
+        analysis_status = self.charon_connector.sample_analysis_status(
+            projectid, sampleid
+        )
+        should_be_started = self.status_should_be_started(
+            analysis_status, **restart_options
+        )
         self.log.info(
             "{} - {}: sample analysis status is '{}' -> sample will{} be included".format(
                 projectid,
                 sampleid,
                 analysis_status,
-                "" if should_be_started else " NOT"))
+                "" if should_be_started else " NOT",
+            )
+        )
         return should_be_started
 
-    def libprep_should_be_started(self,
-                                  projectid,
-                                  sampleid,
-                                  libprepid,
-                                  start_failed_libpreps=False):
+    def libprep_should_be_started(
+        self, projectid, sampleid, libprepid, start_failed_libpreps=False
+    ):
         """
         Decides whether the analysis for a libprep should be started based on the QC status recorded in Charon
         and taking the value of the start flags into account.
@@ -345,7 +382,9 @@ class SarekAnalysis(object):
         :param start_failed_libpreps: if True, failed libpreps will be included in the analysis (default is False)
         :return: True if the analysis for the libprep is ok to start or False otherwise
         """
-        libprep_qc_status = self.charon_connector.libprep_qc_status(projectid, sampleid, libprepid)
+        libprep_qc_status = self.charon_connector.libprep_qc_status(
+            projectid, sampleid, libprepid
+        )
         should_be_started = libprep_qc_status != "FAILED" or start_failed_libpreps
         self.log.info(
             "{} - {} - {}: libprep QC is '{}' -> libprep will{} be included".format(
@@ -353,15 +392,14 @@ class SarekAnalysis(object):
                 sampleid,
                 libprepid,
                 libprep_qc_status,
-                "" if should_be_started else " NOT"))
+                "" if should_be_started else " NOT",
+            )
+        )
         return should_be_started
 
-    def seqrun_should_be_started(self,
-                                 projectid,
-                                 sampleid,
-                                 libprepid,
-                                 seqrunid,
-                                 restart_options):
+    def seqrun_should_be_started(
+        self, projectid, sampleid, libprepid, seqrunid, restart_options
+    ):
         """
         Decides whether the analysis for a seqrun should be started based on the alignment status recorded in Charon
         and taking the value of the restart flags into account.
@@ -375,8 +413,11 @@ class SarekAnalysis(object):
         :return: True if the analysis for the seqrun is ok to start or False otherwise
         """
         seqrun_alignment_status = self.charon_connector.seqrun_alignment_status(
-            projectid, sampleid, libprepid, seqrunid)
-        should_be_started = self.status_should_be_started(seqrun_alignment_status, **restart_options)
+            projectid, sampleid, libprepid, seqrunid
+        )
+        should_be_started = self.status_should_be_started(
+            seqrun_alignment_status, **restart_options
+        )
         self.log.info(
             "{} - {} - {} - {}: seqrun alignment status is '{}' -> seqrun will{} be included".format(
                 projectid,
@@ -384,7 +425,9 @@ class SarekAnalysis(object):
                 libprepid,
                 seqrunid,
                 seqrun_alignment_status,
-                "" if should_be_started else " NOT"))
+                "" if should_be_started else " NOT",
+            )
+        )
         return should_be_started
 
     def processing_steps(self, analysis_sample):
@@ -400,16 +443,28 @@ class SarekAnalysis(object):
             NextflowStep(
                 self.nextflow_config.get("command", "nextflow"),
                 self.nextflow_config.get("subcommand", "run"),
-                **{k: v for k, v in self.nextflow_config.items() if k != "command" and k != "subcommand"})]
+                **{
+                    k: v
+                    for k, v in self.nextflow_config.items()
+                    if k != "command" and k != "subcommand"
+                },
+            )
+        ]
 
     def command_line(self, analysis_sample):
-        raise NotImplementedError("command_line should be implemented in the subclasses")
+        raise NotImplementedError(
+            "command_line should be implemented in the subclasses"
+        )
 
     def generate_tsv_file_contents(self, analysis_sample):
-        raise NotImplementedError("creation of sample tsv file contents should be implemented by subclasses")
+        raise NotImplementedError(
+            "creation of sample tsv file contents should be implemented by subclasses"
+        )
 
     def collect_analysis_metrics(self, analysis_sample):
-        raise NotImplementedError("collection of analysis results should be implemented by subclasses")
+        raise NotImplementedError(
+            "collection of analysis results should be implemented by subclasses"
+        )
 
     def cleanup(self, analysis_sample):
         self.process_connector.cleanup(analysis_sample.sample_analysis_work_dir())
@@ -428,12 +483,13 @@ class SarekAnalysis(object):
             raise SampleNotValidForAnalysisError(
                 analysis_sample.projectid,
                 analysis_sample.sampleid,
-                "no libpreps or seqruns to analyze")
+                "no libpreps or seqruns to analyze",
+            )
 
         tsv_file = analysis_sample.sample_analysis_tsv_file()
         safe_makedir(os.path.dirname(tsv_file))
         with open(tsv_file, "w") as fh:
-            writer = csv.writer(fh, dialect=csv.excel_tab, delimiter=',')
+            writer = csv.writer(fh, dialect=csv.excel_tab, delimiter=",")
             writer.writerows(rows)
         return tsv_file
 
@@ -456,11 +512,8 @@ class SarekAnalysis(object):
     def _sample_analysis_file(cls, project_base_path, projectid, sampleid, extension):
         return os.path.join(
             cls.sample_analysis_path(project_base_path, projectid, sampleid),
-            "{}-{}-{}.{}".format(
-                projectid,
-                sampleid,
-                cls.__name__,
-                extension))
+            "{}-{}-{}.{}".format(projectid, sampleid, cls.__name__, extension),
+        )
 
     @classmethod
     def sample_analysis_exit_code_path(cls, *args):
@@ -492,17 +545,20 @@ class SarekGermlineAnalysis(SarekAnalysis):
         :param analysis_sample: the SarekAnalysisSample to analyze
         :return: a list of the processing steps included in the analysis
         """
-        local_sarek_config = {
-            "outdir": analysis_sample.sample_analysis_results_dir()}
-        local_sarek_config.update({k: v for k, v in self.sarek_config.items() if k != "command"})
-        processing_steps = super(
-            SarekGermlineAnalysis,
-            self).processing_steps(analysis_sample)
+        local_sarek_config = {"outdir": analysis_sample.sample_analysis_results_dir()}
+        local_sarek_config.update(
+            {k: v for k, v in self.sarek_config.items() if k != "command"}
+        )
+        processing_steps = super(SarekGermlineAnalysis, self).processing_steps(
+            analysis_sample
+        )
         processing_steps.append(
             SarekMainStep(
                 self.sarek_config.get("command"),
                 input=analysis_sample.sample_analysis_tsv_file(),
-                **local_sarek_config))
+                **local_sarek_config,
+            )
+        )
         return processing_steps
 
     def command_line(self, analysis_sample):
@@ -516,7 +572,8 @@ class SarekGermlineAnalysis(SarekAnalysis):
         # each analysis step is represented by a SarekWorkflowStep instance
         # create the command line by chaining the command lines from each processing step
         return " ".join(
-            [step.command_line() for step in self.processing_steps(analysis_sample)])
+            [step.command_line() for step in self.processing_steps(analysis_sample)]
+        )
 
     def generate_tsv_file_contents(self, analysis_sample):
         """
@@ -532,7 +589,9 @@ class SarekGermlineAnalysis(SarekAnalysis):
         gender = "NA"
         status = 0
         sampleid = patientid
-        rows.append(['patient','sex','status','sample','lane','fastq_1','fastq_2'])
+        rows.append(
+            ["patient", "sex", "status", "sample", "lane", "fastq_1", "fastq_2"]
+        )
         for sample_fastq in analysis_sample.runid_and_fastq_files_for_sample():
             rows.append([patientid, gender, status, sampleid] + sample_fastq)
         return rows
@@ -560,9 +619,11 @@ class SarekGermlineAnalysis(SarekAnalysis):
         """
         results_parser = ParserIntegrator()
         for processing_step in self.processing_steps(analysis_sample):
-            for parser_type, results_file in processing_step.report_files(analysis_sample):
+            for parser_type, results_file in processing_step.report_files(
+                analysis_sample
+            ):
                 results_parser.add_parser(parser_type(results_file))
         return {
             metric: results_parser.query_parsers("get_{}".format(metric))[0]
-            for metric in ["percent_duplication", "autosomal_coverage", "total_reads"]}
-
+            for metric in ["percent_duplication", "autosomal_coverage", "total_reads"]
+        }

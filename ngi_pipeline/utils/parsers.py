@@ -20,8 +20,12 @@ LOG = minimal_logger(__name__)
 
 ## e.g. A.Wedell_13_03_P567_102_A_140528_D00415_0049_BC423WACXX                         <-- sthlm
 ##  or  ND-0522_NA10860_PCR-free_SX398_NA10860_PCR-free_140821_D00458_0029_AC45JGANXX   <-- uusnp
-STHLM_UUSNP_SEQRUN_RE = re.compile(r'(?P<project_name>\w\.\w+_\d+_\d+|\w{2}-\d+)_(?P<sample_id>[\w-]+)_(?P<libprep_id>\w|\w{2}\d{3}_\2)_(?P<seqrun_id>\d{6}_\w+_\d{4}_.{10})')
-STHLM_UUSNP_SAMPLE_RE = re.compile(r'(?P<project_name>\w\.\w+_\d+_\d+|\w{2}-\d+)_(?P<sample_id>[\w-]+)')
+STHLM_UUSNP_SEQRUN_RE = re.compile(
+    r"(?P<project_name>\w\.\w+_\d+_\d+|\w{2}-\d+)_(?P<sample_id>[\w-]+)_(?P<libprep_id>\w|\w{2}\d{3}_\2)_(?P<seqrun_id>\d{6}_\w+_\d{4}_.{10})"
+)
+STHLM_UUSNP_SAMPLE_RE = re.compile(
+    r"(?P<project_name>\w\.\w+_\d+_\d+|\w{2}-\d+)_(?P<sample_id>[\w-]+)"
+)
 
 
 def determine_library_prep_from_fcid(project_id, sample_name, fcid):
@@ -38,13 +42,15 @@ def determine_library_prep_from_fcid(project_id, sample_name, fcid):
     """
     charon_session = CharonSession()
     try:
-        libpreps = charon_session.sample_get_libpreps(project_id, sample_name)['libpreps']
+        libpreps = charon_session.sample_get_libpreps(project_id, sample_name)[
+            "libpreps"
+        ]
         if libpreps:
             for libprep in libpreps:
                 # Get the sequencing runs and see if they match the FCID we have
-                seqruns = charon_session.libprep_get_seqruns(project_id,
-                                                             sample_name,
-                                                             libprep['libprepid'])['seqruns']
+                seqruns = charon_session.libprep_get_seqruns(
+                    project_id, sample_name, libprep["libprepid"]
+                )["seqruns"]
                 if seqruns:
                     for seqrun in seqruns:
                         seqrun_runid = seqrun["seqrunid"]
@@ -52,50 +58,59 @@ def determine_library_prep_from_fcid(project_id, sample_name, fcid):
                             ## BUG if we have one sample with two libpreps on the same flowcell,
                             ##     this just picks the first one it encounters; instead,
                             ##     it should raise an Exception. Requires restructuring.
-                            return libprep['libprepid']
+                            return libprep["libprepid"]
             else:
                 raise CharonError("No match", 404)
         else:
             raise CharonError("No libpreps found!", 404)
     except CharonError as e:
         if e.status_code == 404:
-            raise ValueError('No library prep found for project "{}" / sample "{}" '
-                             '/ fcid "{}"'.format(project_id, sample_name, fcid))
+            raise ValueError(
+                'No library prep found for project "{}" / sample "{}" '
+                '/ fcid "{}"'.format(project_id, sample_name, fcid)
+            )
         else:
-            raise ValueError('Could not determine library prep for project "{}" '
-                             '/ sample "{}" / fcid "{}": {}'.format(project_id,
-                                                                    sample_name,
-                                                                    fcid,
-                                                                    e))
+            raise ValueError(
+                'Could not determine library prep for project "{}" '
+                '/ sample "{}" / fcid "{}": {}'.format(project_id, sample_name, fcid, e)
+            )
 
 
-def determine_library_prep_from_samplesheet(samplesheet_path, project_id, sample_id, lane_num):
-    lane_num = int(lane_num) # Raises ValueError if it can't convert. Handy
+def determine_library_prep_from_samplesheet(
+    samplesheet_path, project_id, sample_id, lane_num
+):
+    lane_num = int(lane_num)  # Raises ValueError if it can't convert. Handy
     samplesheet = parse_samplesheet(samplesheet_path)
     for row in samplesheet:
         if not row.get("Description"):
             continue
-        ss_project_id = row.get("SampleProject") or row.get("Sample_Project") or row.get("Project")
-        ss_project_id = ss_project_id.replace('Project_', '')
+        ss_project_id = (
+            row.get("SampleProject") or row.get("Sample_Project") or row.get("Project")
+        )
+        ss_project_id = ss_project_id.replace("Project_", "")
         ss_sample_id = row.get("SampleID") or row.get("Sample_ID")
-        ss_sample_id = ss_sample_id.replace('Sample_', '')
+        ss_sample_id = ss_sample_id.replace("Sample_", "")
         ss_lane_num = int(row["Lane"])
-        if project_id == ss_project_id and \
-           sample_id == ss_sample_id and \
-           lane_num == ss_lane_num:
-               # Resembles 'LIBRARY_NAME:SX398_NA11993_Nano'
-               for keyval in row["Description"].split(";"):
-                       if keyval.split(":")[0] =="LIBRARY_NAME":
-                           return keyval.split(":")[1]
-               else:
-                   error_msg = ('Malformed description in "{}"; cannot get '
-                                'libprep information'.format(samplesheet_path))
-                   raise ValueError(error_msg)
+        if (
+            project_id == ss_project_id
+            and sample_id == ss_sample_id
+            and lane_num == ss_lane_num
+        ):
+            # Resembles 'LIBRARY_NAME:SX398_NA11993_Nano'
+            for keyval in row["Description"].split(";"):
+                if keyval.split(":")[0] == "LIBRARY_NAME":
+                    return keyval.split(":")[1]
+            else:
+                error_msg = (
+                    'Malformed description in "{}"; cannot get '
+                    "libprep information".format(samplesheet_path)
+                )
+                raise ValueError(error_msg)
     else:
-        error_msg = ('No match found in "{}" for project "{}" / sample "{}" / '
-                     'lane number "{}"'.format(samplesheet_path,
-                                               project_id, sample_id,
-                                               lane_num))
+        error_msg = (
+            'No match found in "{}" for project "{}" / sample "{}" / '
+            'lane number "{}"'.format(samplesheet_path, project_id, sample_id, lane_num)
+        )
         raise ValueError(error_msg)
 
 
@@ -110,9 +125,9 @@ def _get_and_trim_field_value(row_dict, fieldnames, trim_away_string=""):
     :return: the value of the first key-value pair matched or None if no matching key could be found
     """
     try:
-        return list(filter(
-            lambda v: v is not None,
-            [row_dict.get(k) for k in fieldnames]))[0].replace(trim_away_string, "")
+        return list(
+            filter(lambda v: v is not None, [row_dict.get(k) for k in fieldnames])
+        )[0].replace(trim_away_string, "")
     except IndexError:
         return None
 
@@ -126,9 +141,11 @@ def _get_libprepid_from_description(description):
     """
     # parameters are delimited with ';', values are indicated with ':'
     try:
-        return list(filter(
-            lambda param: param.startswith("LIBRARY_NAME:"),
-            description.split(";")))[0].split(":")[1]
+        return list(
+            filter(
+                lambda param: param.startswith("LIBRARY_NAME:"), description.split(";")
+            )
+        )[0].split(":")[1]
     except IndexError:
         return None
 
@@ -152,42 +169,58 @@ def get_sample_numbers_from_samplesheet(samplesheet_path):
     samples = []
     seen_samples = []
     for row in samplesheet:
-        ss_project_id = _get_and_trim_field_value(row, ["SampleProject", "Sample_Project", "Project"], "Project_")
-        ss_sample_name = _get_and_trim_field_value(row, ["SampleName", "Sample_Name"], "Sample_")
-        ss_sample_id = _get_and_trim_field_value(row, ["SampleID", "Sample_ID"], "Sample_")
+        ss_project_id = _get_and_trim_field_value(
+            row, ["SampleProject", "Sample_Project", "Project"], "Project_"
+        )
+        ss_sample_name = _get_and_trim_field_value(
+            row, ["SampleName", "Sample_Name"], "Sample_"
+        )
+        ss_sample_id = _get_and_trim_field_value(
+            row, ["SampleID", "Sample_ID"], "Sample_"
+        )
         ss_barcode = "-".join(
-            [x for x in [_get_and_trim_field_value(row, ["index"]),
-                         _get_and_trim_field_value(row, ["index2"])] 
-             if x is not None]
-            )
+            [
+                x
+                for x in [
+                    _get_and_trim_field_value(row, ["index"]),
+                    _get_and_trim_field_value(row, ["index2"]),
+                ]
+                if x is not None
+            ]
+        )
         ss_lane_num = int(_get_and_trim_field_value(row, ["Lane"]))
         ss_libprepid = _get_libprepid_from_description(
-            _get_and_trim_field_value(row, ["Description"]))
+            _get_and_trim_field_value(row, ["Description"])
+        )
         fingerprint = "-".join([ss_project_id, ss_sample_id])
         if fingerprint not in seen_samples:
             seen_samples.append(fingerprint)
         ss_sample_number = seen_samples.index(fingerprint) + 1
-        samples.append([
-            "S{}".format(str(ss_sample_number)),
-            ss_project_id,
-            ss_sample_name,
-            ss_sample_id,
-            ss_barcode,
-            ss_lane_num,
-            ss_libprepid
-        ])
+        samples.append(
+            [
+                "S{}".format(str(ss_sample_number)),
+                ss_project_id,
+                ss_sample_name,
+                ss_sample_id,
+                ss_barcode,
+                ss_lane_num,
+                ss_libprepid,
+            ]
+        )
     return samples
+
 
 @memoized
 def parse_samplesheet(samplesheet_path):
-    """Parses an Illumina SampleSheet.csv and returns a list of dicts
-    """
+    """Parses an Illumina SampleSheet.csv and returns a list of dicts"""
     try:
         # try opening as a gzip file (Uppsala)
         f = gzip.open(samplesheet_path)
         f.readline()
         f.seek(0)
-    except IOError: # I would be more comfortable if this had an error code attr. Just sayin'.
+    except (
+        IOError
+    ):  # I would be more comfortable if this had an error code attr. Just sayin'.
         # Not gzipped
         f = open(samplesheet_path)
 
@@ -195,7 +228,7 @@ def parse_samplesheet(samplesheet_path):
     # Okay this looks kind of bad and will probably break easily, but if you want
     # it done better you'll have to do it yourself.
     first_line = f.readline()
-    if first_line.startswith("["): # INI/csv format
+    if first_line.startswith("["):  # INI/csv format
         # Advance to the [DATA] section
         for line in f:
             if line.startswith("[Data]"):
@@ -204,8 +237,11 @@ def parse_samplesheet(samplesheet_path):
             # Won't add incomplete rows (not part of the [DATA] field)
     else:
         f.seek(0)
-    return  [ row for row in csv.DictReader(f, dialect="excel", restval=None)
-              if all([x is not None for x in list(row.values())]) ] 
+    return [
+        row
+        for row in csv.DictReader(f, dialect="excel", restval=None)
+        if all([x is not None for x in list(row.values())])
+    ]
 
 
 def find_fastq_read_pairs(file_list):
@@ -239,10 +275,10 @@ def find_fastq_read_pairs(file_list):
     # --> This is the standard Illumina/Uppsala format (and Sthlm -> August 1st 2014)
     #     Format: <sample_name>_<index>_<lane>_<read>_<group>.fastq.gz
     #     Example: NA10860_NR_TAAGGC_L005_R1_001.fastq.gz
-    suffix_pattern = re.compile(r'(.*)fastq')
+    suffix_pattern = re.compile(r"(.*)fastq")
     # Cut off at the read group
-    file_format_pattern = re.compile(r'(.*)_(?:R\d|\d\.).*')
-    index_format_pattern= re.compile(r'(.*)_(?:I\d|\d\.).*')
+    file_format_pattern = re.compile(r"(.*)_(?:R\d|\d\.).*")
+    index_format_pattern = re.compile(r"(.*)_(?:I\d|\d\.).*")
     matches_dict = collections.defaultdict(list)
     for file_pathname in file_list:
         file_basename = os.path.basename(file_pathname)
@@ -250,19 +286,22 @@ def find_fastq_read_pairs(file_list):
         try:
             # Check for a pair
             pair_base = file_format_pattern.match(file_basename).groups()[0]
-            matches_dict["{}_{}".format(pair_base,fc_id)].append(file_pathname)
+            matches_dict["{}_{}".format(pair_base, fc_id)].append(file_pathname)
         except AttributeError:
-    
-            #look for index file - 10Xgenomics case
+            # look for index file - 10Xgenomics case
             index_file = index_format_pattern.match(file_basename).groups()[0]
             if index_file:
-                matches_dict["{}_{}".format(index_file,fc_id)].append(file_pathname)
+                matches_dict["{}_{}".format(index_file, fc_id)].append(file_pathname)
             else:
-                LOG.warning("Warning: file doesn't match expected file format, "
-                      "cannot be paired: \"{}\"".format(file_pathname))
+                LOG.warning(
+                    "Warning: file doesn't match expected file format, "
+                    'cannot be paired: "{}"'.format(file_pathname)
+                )
                 # File could not be paired, set by itself (?)
                 file_basename_stripsuffix = suffix_pattern.split(file_basename)[0]
-                matches_dict[file_basename_stripsuffix].append(os.path.abspath(file_pathname))
+                matches_dict[file_basename_stripsuffix].append(
+                    os.path.abspath(file_pathname)
+                )
     return dict(matches_dict)
 
 
@@ -282,13 +321,13 @@ class XmlToList(list):
                     self.append(text)
             else:
                 # Set dict for attributes
-                self.append({k:v for k,v in element.items()})
+                self.append({k: v for k, v in element.items()})
 
 
 # Generic XML to dict parsing
 # See http://code.activestate.com/recipes/410469-xml-as-dictionary/
 class XmlToDict(dict):
-    '''
+    """
     Example usage:
 
     >>> tree = ET.parse('your_file.xml')
@@ -301,7 +340,8 @@ class XmlToDict(dict):
     >>> xmldict = XmlToDict(root)
 
     And then use xmldict for what it is... a dict.
-    '''
+    """
+
     def __init__(self, parent_element):
         if list(parent_element.items()):
             self.update(dict(list(parent_element.items())))
@@ -330,7 +370,7 @@ class XmlToDict(dict):
             elif list(element.items()):
                 self.update({element.tag: dict(list(element.items()))})
                 # add the following line
-                self[element.tag].update({"__Content__":element.text})
+                self[element.tag].update({"__Content__": element.text})
 
             # finally, if there are no child tags and no attributes, extract
             # the text
@@ -340,6 +380,7 @@ class XmlToDict(dict):
 
 class RunMetricsParser(dict):
     """Generic Run Parser class"""
+
     _metrics = []
     ## Following paths are ignored
     ignore = "|".join(["tmp", "tx", "-split", "log"])
@@ -348,7 +389,7 @@ class RunMetricsParser(dict):
     def __init__(self, log=None):
         super(RunMetricsParser, self).__init__()
         self.files = []
-        self.path=None
+        self.path = None
         self.log = LOG
         if log:
             self.log = log
@@ -366,20 +407,23 @@ class RunMetricsParser(dict):
 
     def filter_files(self, pattern, filter_fn=None):
         """Take file list and return those files that pass the filter_fn criterium"""
+
         def filter_function(f):
             return re.search(pattern, f) != None
+
         if not filter_fn:
             filter_fn = filter_function
         return list(filter(filter_fn, self.files))
 
     def parse_json_files(self, filter_fn=None):
-        """Parse json files and return the corresponding dicts
-        """
+        """Parse json files and return the corresponding dicts"""
+
         def filter_function(f):
             return f is not None and f.endswith(".json")
+
         if not filter_fn:
             filter_fn = filter_function
-        files = self.filter_files(None,filter_fn)
+        files = self.filter_files(None, filter_fn)
         dicts = []
         for f in files:
             with open(f) as fh:
@@ -387,13 +431,14 @@ class RunMetricsParser(dict):
         return dicts
 
     def parse_csv_files(self, filter_fn=None):
-        """Parse csv files and return a dict with filename as key and the corresponding dicts as value
-        """
+        """Parse csv files and return a dict with filename as key and the corresponding dicts as value"""
+
         def filter_function(f):
             return f is not None and f.endswith(".csv")
+
         if not filter_fn:
             filter_fn = filter_function
-        files = self.filter_files(None,filter_fn)
+        files = self.filter_files(None, filter_fn)
         dicts = {}
         for f in files:
             with open(f) as fh:
@@ -403,6 +448,7 @@ class RunMetricsParser(dict):
 
 class RunInfoParser(object):
     """RunInfo parser"""
+
     def __init__(self):
         self._data = {}
         self._element = None
@@ -412,7 +458,7 @@ class RunInfoParser(object):
         return self._data
 
     def _start_element(self, name, attrs):
-        self._element=name
+        self._element = name
         if name == "Run":
             self._data["Id"] = attrs["Id"]
             self._data["Number"] = attrs["Number"]
@@ -422,7 +468,7 @@ class RunInfoParser(object):
             self._data["Reads"].append(attrs)
 
     def _end_element(self, name):
-        self._element=None
+        self._element = None
 
     def _char_data(self, data):
         want_elements = ["Flowcell", "Instrument", "Date"]
@@ -441,6 +487,7 @@ class RunInfoParser(object):
 
 class RunParametersParser(object):
     """runParameters.xml parser"""
+
     def __init__(self):
         self.data = {}
 
@@ -449,13 +496,14 @@ class RunParametersParser(object):
         root = tree.getroot()
         self.data = XmlToDict(root)
         # If not a MiSeq run, return the contents of the Setup tag
-        if 'MCSVersion' not in self.data:
-            self.data = self.data['Setup']
+        if "MCSVersion" not in self.data:
+            self.data = self.data["Setup"]
         return self.data
 
 
 class FlowcellRunMetricsParser(RunMetricsParser):
     """Flowcell level class for parsing flowcell run metrics data."""
+
     def __init__(self, path):
         RunMetricsParser.__init__(self)
         self.path = path
@@ -463,7 +511,7 @@ class FlowcellRunMetricsParser(RunMetricsParser):
     def parseRunInfo(self, fn="RunInfo.xml", **kw):
         infile_path = os.path.join(os.path.abspath(self.path), fn)
         self.log.info("Reading run info from file {}".format(infile_path))
-        with open(infile_path, 'r') as f:
+        with open(infile_path, "r") as f:
             parser = RunInfoParser()
             data = parser.parse(f)
         return data

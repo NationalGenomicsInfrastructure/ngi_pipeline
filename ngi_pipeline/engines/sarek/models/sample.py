@@ -13,7 +13,9 @@ class SarekAnalysisSample(object):
     the sample keeps a reference to the analysis object and delegates queries when needed.
     """
 
-    def __init__(self, project_object, sample_object, analysis_object, restart_options=None):
+    def __init__(
+        self, project_object, sample_object, analysis_object, restart_options=None
+    ):
         """
         Create an instance of SarekAnalysisSample
 
@@ -28,7 +30,13 @@ class SarekAnalysisSample(object):
         self.projectid = project_object.project_id
         self.project_base_path = project_object.base_path
         self.restart_options = {
-            key: False for key in ["restart_failed_jobs", "restart_finished_jobs", "restart_running_jobs"]}
+            key: False
+            for key in [
+                "restart_failed_jobs",
+                "restart_finished_jobs",
+                "restart_running_jobs",
+            ]
+        }
         self.restart_options.update(restart_options or {})
         self.sample_ngi_object = sample_object
 
@@ -36,13 +44,17 @@ class SarekAnalysisSample(object):
         """
         :return: the path to the sample input data
         """
-        return self.analysis_object.sample_data_path(self.project_base_path, self.projectid, self.sampleid)
+        return self.analysis_object.sample_data_path(
+            self.project_base_path, self.projectid, self.sampleid
+        )
 
     def sample_analysis_path(self):
         """
         :return: the path to the analysis output for the sample
         """
-        return self.analysis_object.sample_analysis_path(self.project_base_path, self.projectid, self.sampleid)
+        return self.analysis_object.sample_analysis_path(
+            self.project_base_path, self.projectid, self.sampleid
+        )
 
     def sample_seqrun_path(self, libprepid, seqrunid):
         """
@@ -57,19 +69,26 @@ class SarekAnalysisSample(object):
         :return: the path to the exit code file for this sample and analysis
         """
         return self.analysis_object.sample_analysis_exit_code_path(
-            self.project_base_path, self.projectid, self.sampleid)
+            self.project_base_path, self.projectid, self.sampleid
+        )
 
     def sample_analysis_tsv_file(self):
         """
         :return: the path to the tsv file specifying the details of the analysis
         """
-        return self.analysis_object.sample_analysis_tsv_file(self.project_base_path, self.projectid, self.sampleid)
+        return self.analysis_object.sample_analysis_tsv_file(
+            self.project_base_path, self.projectid, self.sampleid
+        )
 
     def sample_analysis_work_dir(self):
-        return self.analysis_object.sample_analysis_work_dir(self.project_base_path, self.projectid, self.sampleid)
+        return self.analysis_object.sample_analysis_work_dir(
+            self.project_base_path, self.projectid, self.sampleid
+        )
 
     def sample_analysis_results_dir(self):
-        return self.analysis_object.sample_analysis_results_dir(self.project_base_path, self.projectid, self.sampleid)
+        return self.analysis_object.sample_analysis_results_dir(
+            self.project_base_path, self.projectid, self.sampleid
+        )
 
     def _get_sample_librep(self, libprepid):
         """
@@ -99,9 +118,13 @@ class SarekAnalysisSample(object):
 
         :return: a list of NGILibprep objects representing libpreps that fulfil the criteria for being analyzed
         """
-        return [lp for lp in self.sample_ngi_object 
-                if self.analysis_object.libprep_should_be_started(
-                    self.projectid, self.sampleid, lp.name)]
+        return [
+            lp
+            for lp in self.sample_ngi_object
+            if self.analysis_object.libprep_should_be_started(
+                self.projectid, self.sampleid, lp.name
+            )
+        ]
 
     def seqruns_to_analyze(self, libprep):
         """
@@ -113,8 +136,17 @@ class SarekAnalysisSample(object):
         analysis
         :return: a list of NGISeqrun objects representing seqruns that fulfil the criteria for being analyzed
         """
-        return [sr for sr in libprep if self.analysis_object.seqrun_should_be_started(
-                self.projectid, self.sampleid, libprep.name, sr.name, self.restart_options)]
+        return [
+            sr
+            for sr in libprep
+            if self.analysis_object.seqrun_should_be_started(
+                self.projectid,
+                self.sampleid,
+                libprep.name,
+                sr.name,
+                self.restart_options,
+            )
+        ]
 
     def runid_and_fastq_files_for_sample(self):
         """
@@ -140,7 +172,9 @@ class SarekAnalysisSample(object):
         fastq file R2 (if available)]
         """
         for seqrun in self.seqruns_to_analyze(libprep):
-            for seqrun_fastq in self._get_runid_and_fastq_files_for_seqrun(libprep.name, seqrun):
+            for seqrun_fastq in self._get_runid_and_fastq_files_for_seqrun(
+                libprep.name, seqrun
+            ):
                 yield seqrun_fastq
 
     def _get_runid_and_fastq_files_for_seqrun(self, libprepid, seqrun):
@@ -155,12 +189,18 @@ class SarekAnalysisSample(object):
         # the runfolder is represented with a Runfolder object
         runfolder = Runfolder(self.sample_seqrun_path(libprepid, seqrun.name))
         # iterate over the fastq file pairs belonging to the seqrun, filter out files with index reads
-        sample_fastq_objects = [SampleFastq(os.path.join(runfolder.path, f)) 
-                                for f in [fq for fq in seqrun.fastq_files 
-                                          if not is_index_file(fq)]]
-        for sample_fastq_file_pair in SampleFastq.sample_fastq_file_pair(sample_fastq_objects):
+        sample_fastq_objects = [
+            SampleFastq(os.path.join(runfolder.path, f))
+            for f in [fq for fq in seqrun.fastq_files if not is_index_file(fq)]
+        ]
+        for sample_fastq_file_pair in SampleFastq.sample_fastq_file_pair(
+            sample_fastq_objects
+        ):
             runid = "{}.{}.{}".format(
-                runfolder.flowcell_id, sample_fastq_file_pair[0].lane_number, sample_fastq_file_pair[0].sample_number)
+                runfolder.flowcell_id,
+                sample_fastq_file_pair[0].lane_number,
+                sample_fastq_file_pair[0].sample_number,
+            )
             yield [runid] + [x.path for x in sample_fastq_file_pair]
 
     def runid_and_fastq_files_from_csv(self):
@@ -173,6 +213,9 @@ class SarekAnalysisSample(object):
         :return: an iterator where each element is a list having the elements [identifier, fastq file R1,
         fastq file R2 (if available)]
         """
-        for runid_and_fastq_file_paths in self.analysis_object.runid_and_fastq_files_from_tsv_file(
-                self.sample_analysis_tsv_file()):
+        for (
+            runid_and_fastq_file_paths
+        ) in self.analysis_object.runid_and_fastq_files_from_tsv_file(
+            self.sample_analysis_tsv_file()
+        ):
             yield runid_and_fastq_file_paths

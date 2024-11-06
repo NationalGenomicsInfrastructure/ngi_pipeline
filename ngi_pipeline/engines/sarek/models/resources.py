@@ -9,8 +9,9 @@ class SampleFastq(object):
     SampleFastq represents a fastq file and takes care of identifying properties such as sample name, lane, read etc.
     by splitting the path based on an expected regexp.
     """
+
     # the regexp used for splitting the file name
-    FASTQ_REGEXP = r'^(.+)_([^_]+)_L00(\d)_R(\d)[^\.]*(\..*)$'
+    FASTQ_REGEXP = r"^(.+)_([^_]+)_L00(\d)_R(\d)[^\.]*(\..*)$"
 
     def __init__(self, path):
         """
@@ -21,11 +22,13 @@ class SampleFastq(object):
         self.path = path
         self.dirname = os.path.dirname(self.path)
         self.filename = os.path.basename(self.path)
-        self.sample_name, \
-            self.sample_number, \
-            self.lane_number, \
-            self.read_number, \
-            self.file_extension = self.split_filename(self.filename)
+        (
+            self.sample_name,
+            self.sample_number,
+            self.lane_number,
+            self.read_number,
+            self.file_extension,
+        ) = self.split_filename(self.filename)
 
     def split_filename(self, filename):
         """
@@ -49,13 +52,15 @@ class SampleFastq(object):
         :param sample_fastqs: a list of SampleFastq objects in any order
         :return: a generator of lists of fastq file pairs
         """
-        sorted_fastqs = sorted(sample_fastqs, key=lambda f: (f.sample_number, f.lane_number, f.read_number))
+        sorted_fastqs = sorted(
+            sample_fastqs, key=lambda f: (f.sample_number, f.lane_number, f.read_number)
+        )
         n = 0
         while n < len(sorted_fastqs):
             n += 1
-            if int(sorted_fastqs[n-1].read_number) > 1:
+            if int(sorted_fastqs[n - 1].read_number) > 1:
                 continue
-            fastqs_to_yield = [sorted_fastqs[n-1]]
+            fastqs_to_yield = [sorted_fastqs[n - 1]]
             try:
                 if int(sorted_fastqs[n].read_number) > 1:
                     fastqs_to_yield.append(sorted_fastqs[n])
@@ -70,8 +75,9 @@ class Runfolder(object):
     Runfolder represents a runfolder and identifies properties such as run date, instrument id etc. based on the
     name element of the path and a regexp used to identify them.
     """
+
     # the regexp used to split the runfolder name
-    RUNFOLDER_REGEXP = r'^(\d{6})_([^_]+)_(\d+)_([AB])(\w+)$'
+    RUNFOLDER_REGEXP = r"^(\d{6})_([^_]+)_(\d+)_([AB])(\w+)$"
 
     def __init__(self, path):
         """
@@ -82,11 +88,13 @@ class Runfolder(object):
         self.path = path
         self.dirname = os.path.dirname(self.path)
         self.runfolder_name = os.path.basename(self.path)
-        self.run_date, \
-            self.instrument_id, \
-            self.run_number, \
-            self.flowcell_position, \
-            self.flowcell_id = self.split_runfolder_name(self.runfolder_name)
+        (
+            self.run_date,
+            self.instrument_id,
+            self.run_number,
+            self.flowcell_position,
+            self.flowcell_id,
+        ) = self.split_runfolder_name(self.runfolder_name)
 
     def split_runfolder_name(self, runfolder_name):
         """
@@ -106,6 +114,7 @@ class ReferenceGenome(object):
     The ReferenceGenome class represents the reference genome used by Sarek for the analysis. It has a factory method
     for returning the correct instance from a string representation.
     """
+
     NAME = None
 
     def __repr__(self):
@@ -121,10 +130,12 @@ class ReferenceGenome(object):
         :return: a ReferenceGenome instance
         """
         try:
-            return list(filter(
-                lambda ref: str(ref).lower() == genome_name.lower(),
-                (GRCh37(), GRCh38())
-                ))[0]
+            return list(
+                filter(
+                    lambda ref: str(ref).lower() == genome_name.lower(),
+                    (GRCh37(), GRCh38()),
+                )
+            )[0]
         except IndexError:
             raise ReferenceGenomeNotRecognized(genome_name)
 
@@ -140,9 +151,11 @@ class ReferenceGenome(object):
 
 class GRCh37(ReferenceGenome):
     """Class representing the GRCh37 reference genome"""
+
     NAME = "GATK.GRCh37"
 
 
 class GRCh38(ReferenceGenome):
     """Class representing the GRCh38 reference genome"""
+
     NAME = "GATK.GRCh38"
