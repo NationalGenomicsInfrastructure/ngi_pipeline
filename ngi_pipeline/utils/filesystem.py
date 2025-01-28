@@ -369,7 +369,7 @@ def recreate_project_from_filesystem(
                 name=libprep_name, dirname=libprep_name
             )
 
-            seqruns_pattern = os.path.join(libprep_dir, "*_*_*_*")
+            seqruns_pattern = os.path.join(libprep_dir, "*_*_*")
             seqruns = list(filter(os.path.isdir, glob.glob(seqruns_pattern)))
             if not seqruns:
                 LOG.warning('No seqruns found for libprep "{}"'.format(libprep_obj))
