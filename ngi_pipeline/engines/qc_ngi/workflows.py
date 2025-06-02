@@ -56,7 +56,7 @@ def workflow_qc(input_files, output_dir, config):
             cl_list.append(workflow_function(input_files, output_subdir, config))
         except ValueError as e:
             LOG.error(
-                "Could not create command line for workflow " '"{}" ({})'.format(
+                'Could not create command line for workflow "{}" ({})'.format(
                     workflow_name, e
                 )
             )
@@ -115,7 +115,8 @@ def workflow_fastqc(input_files, output_dir, config):
         )
         # now the fastq command (one per file)
         cl_list.append(
-            "{fastqc_path} -t {num_threads} -o {output_dir} " "{fastq_files}".format(
+            "{fastqc_path} -t {num_threads} -o {output_dir} --nogroup"
+            "{fastq_files}".format(
                 output_dir=output_dir,
                 fastqc_path=fastqc_path,
                 num_threads=num_threads,
@@ -295,7 +296,7 @@ def find_on_path(binary_name, config=None):
     if not config:
         config = {}
     LOG.info(
-        "Path to {} not specified in config file; " "checking if it is on PATH".format(
+        "Path to {} not specified in config file; checking if it is on PATH".format(
             binary_name
         )
     )
