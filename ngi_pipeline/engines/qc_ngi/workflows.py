@@ -100,6 +100,7 @@ def workflow_fastqc(input_files, output_dir, config):
     )
     # Construct the command lines
     num_threads = config.get("qc", {}).get("fastqc", {}).get("threads") or 1
+    options = " ".join(config.get("qc", {}).get("fastqc", {}).get("options") or [])
     cl_list = []
     # fastqc commands
     for fastq_file_pair in fastq_to_analyze:
@@ -115,11 +116,12 @@ def workflow_fastqc(input_files, output_dir, config):
         )
         # now the fastq command (one per file)
         cl_list.append(
-            "{fastqc_path} -t {num_threads} -o {output_dir} --nogroup"
+            "{fastqc_path} -t {num_threads} -o {output_dir} {options} "
             "{fastq_files}".format(
                 output_dir=output_dir,
                 fastqc_path=fastqc_path,
                 num_threads=num_threads,
+                options=options,
                 fastq_files=fastq_file_softlinked,
             )
         )
