@@ -42,16 +42,16 @@ class CharonSession(six.with_metaclass(Singleton, requests.Session)):
             raise ValueError("Unable to load needed Charon variable: {}".format(e))
 
         self.get = validate_response(
-            functools.partial(self.get, headers=self._api_token_dict, timeout=30)
+            functools.partial(self.get, headers=self._api_token_dict, timeout=45)
         )
         self.post = validate_response(
-            functools.partial(self.post, headers=self._api_token_dict, timeout=30)
+            functools.partial(self.post, headers=self._api_token_dict, timeout=45)
         )
         self.put = validate_response(
-            functools.partial(self.put, headers=self._api_token_dict, timeout=30)
+            functools.partial(self.put, headers=self._api_token_dict, timeout=45)
         )
         self.delete = validate_response(
-            functools.partial(self.delete, headers=self._api_token_dict, timeout=30)
+            functools.partial(self.delete, headers=self._api_token_dict, timeout=45)
         )
 
         self._project_params = (
